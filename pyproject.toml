@@ -1,0 +1,112 @@
+[project]
+name = "jellyfin-media-normalizer"
+version = "0.1.0"
+description = "Normalize movie and TV series names for Jellyfin, validate matches, and add provider IDs for reliable library identification."
+readme = "README.md"
+requires-python = "==3.14.2"
+license = { text = "MIT" }
+authors = [
+  { name = "Zdenek Pokorny" }
+]
+keywords = [
+  "jellyfin",
+  "media",
+  "rename",
+  "normalization",
+  "tmdb",
+  "tvdb",
+  "synology",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Multimedia :: Video",
+  "Topic :: Utilities",
+]
+
+dependencies = [
+  "click>=8.1.8",
+  "pydantic>=2.11.0",
+  "httpx>=0.28.1",
+  "rapidfuzz>=3.13.0",
+  "rich>=14.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pokornyIt/jellyfin-media-normalizer"
+Repository = "https://github.com/pokornyIt/jellyfin-media-normalizer"
+Issues = "https://github.com/pokornyIt/jellyfin-media-normalizer/issues"
+
+[project.scripts]
+jellyfin-media-normalizer = "jellyfin_media_normalizer.cli:app"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.5",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.14.0",
+  "pyright>=1.1.398",
+  "pre-commit>=4.5.0",
+  "respx>=0.21",           # httpx mocking
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jellyfin_media_normalizer"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "W",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+  "C4",
+  "TID",
+  "RUF",
+]
+ignore = [
+  "E501",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+include = ["src", "tests"]
+venvPath = "."
+venv = ".venv"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownParameterType = false
+reportUnusedImport = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"

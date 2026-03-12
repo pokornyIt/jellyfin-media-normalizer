@@ -1,0 +1,99 @@
+# ----------------------------
+# OS / editors
+# ----------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------
+# Python bytecode / caches
+# ----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# ----------------------------
+# Virtual environments
+# ----------------------------
+.venv/
+venv/
+ENV/
+env/
+
+# ----------------------------
+# uv
+# ----------------------------
+# Keep uv.lock committed (recommended), ignore any local cache dirs if present
+.uv/
+
+# ----------------------------
+# Build / packaging
+# ----------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+wheelhouse/
+
+# ----------------------------
+# Coverage / reports
+# ----------------------------
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+junit.xml
+pytest.xml
+
+# ----------------------------
+# Logs / runtime data
+# ----------------------------
+*.log
+logs/
+tmp/
+run/
+data/
+cache/
+storage/
+
+# If you store SQLite DB locally
+*.sqlite
+*.sqlite3
+*.db
+
+# ----------------------------
+# Environment / secrets
+# ----------------------------
+.env
+.env.*
+!.env.example
+
+# ----------------------------
+# VS Code
+# ----------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/cspell.json
+
+# ----------------------------
+# JetBrains (IntelliJ / PyCharm)
+# ----------------------------
+.idea/
+*.iml
+
+# ----------------------------
+# Type check / tooling outputs (optional)
+# ----------------------------
+reports/
+
+# ----------------------------
+# Tests / test outputs
+# ----------------------------
+.cache/

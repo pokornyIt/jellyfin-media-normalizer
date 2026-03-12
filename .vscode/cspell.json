@@ -1,0 +1,63 @@
+{
+    "version": "0.2",
+    "enabled": true,
+    "language": "en,en-US",
+    "minWordLength": 4,
+    "numSuggestions": 8,
+    "useGitignore": true,
+    "allowCompoundWords": false,
+    "languageSettings": [
+        {
+            "languageId": "*",
+            "locale": "en",
+            "dictionaries": [
+                "wordsEn"
+            ]
+        },
+        {
+            "languageId": "python",
+            "dictionaries": [
+                "python"
+            ]
+        },
+        {
+            "languageId": "markdown",
+            "dictionaries": [
+                "markdown"
+            ]
+        }
+    ],
+    "flagWords": [
+        "hte"
+    ],
+    "words": [
+        "addopts",
+        "dataclasses",
+        "docstrings",
+        "httpx",
+        "imdbid",
+        "Jellyfin",
+        "pathlib",
+        "Pokorny",
+        "Pydantic",
+        "pytest",
+        "pythonpath",
+        "rapidfuzz",
+        "respx",
+        "rtype",
+        "testpaths",
+        "tmdb",
+        "tmdbid",
+        "TVDB",
+        "tvdbid",
+        "venv",
+        "Zdenek"
+    ],
+    "ignorePaths": [
+        "package-lock.json",
+        "vscode-extension",
+        ".git",
+        ".vscode",
+        "uv.lock"
+    ]
+}
