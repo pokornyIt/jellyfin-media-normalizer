@@ -53,6 +53,27 @@
         "venv",
         "Zdenek"
     ],
+    "ignoreWords": [
+        "bluray",
+        "brrip",
+        "bdrip",
+        "webrip",
+        "web-dl",
+        "webdl",
+        "dvdrip",
+        "hdrip",
+        "x264",
+        "x265",
+        "h264",
+        "h265",
+        "hevc",
+        "aac",
+        "dts",
+        "ac3",
+        "proper",
+        "repack",
+        "remux"
+    ],
     "ignorePaths": [
         "package-lock.json",
         "vscode-extension",

@@ -281,15 +281,30 @@ src/jellyfin_media_normalizer/
 ├── cli/
 │   ├── __init__.py
 │   └── app.py
-├── services/
+├── models/
+│   ├── __init__.py
+│   ├── media_item.py
+│   ├── media_type.py
+│   ├── parsed_name.py
+│   └── scan_result.py
+├── parsers/
+│   ├── __init__.py
+│   ├── classifier.py
+│   ├── filename_cleaner.py
+│   ├── movie_name_parser.py
+│   └── tv_episode_parser.py
+├── reporters/
+│   ├── __init__.py
+│   └── json_reporter.py├── services/
 │   ├── __init__.py
 │   └── scan_service.py
 ├── scanners/
 │   ├── __init__.py
 │   └── library_scanner.py
-├── models/
+├── services/
 │   ├── __init__.py
-│   └── media_item.py
+│   ├── parse_service.py
+│   └── scan_service.py
 └── utils/
     ├── __init__.py
     ├── logging.py

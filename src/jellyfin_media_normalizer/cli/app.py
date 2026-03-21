@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from logging import Logger
 from pathlib import Path
 
 import click
 
+from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
 from jellyfin_media_normalizer.utils.logging import get_logger, setup_logging
@@ -33,7 +35,7 @@ def app(ctx: click.Context) -> None:
 def info(ctx: click.Context) -> None:
     """Show current runtime settings."""
     settings: Settings = ctx.obj["settings"]
-    logger = get_logger(__name__)
+    logger: Logger = get_logger(__name__)
 
     logger.info(
         "Displaying runtime settings",
@@ -61,7 +63,7 @@ def scan(ctx: click.Context) -> None:
     """Scan the media library and print a summary."""
     settings: Settings = ctx.obj["settings"]
     service: ScanService = ScanService(settings=settings)
-    media_items = service.run()
+    media_items: list[MediaItem] = service.run()
 
     click.echo(f"Discovered {len(media_items)} media files.")
 
