@@ -30,8 +30,16 @@ class MovieNameParser:
 
         title: str = normalized_name
         if year_match is not None:
-            title = normalized_name[: year_match.start()].strip(" -")
+            # Find start of the year (handle parentheses like (2016))
+            year_start = year_match.start()
+            # Backtrack to find opening parenthesis if present
+            paren_start = normalized_name.rfind("(", 0, year_start)
+            if paren_start != -1:
+                title = normalized_name[:paren_start].strip(" -")
+            else:
+                title = normalized_name[:year_start].strip(" -")
 
+        # Remove remaining language codes and subtitles
         title = re.sub(r"\s*-\s*[A-Z]{2}(?:\s+\(tit\. CZ\))?\s*$", "", title).strip()
         title = re.sub(r"\s+\(tit\. CZ\)\s*$", "", title).strip()
 

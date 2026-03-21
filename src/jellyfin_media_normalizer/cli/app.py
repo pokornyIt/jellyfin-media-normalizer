@@ -8,6 +8,9 @@ from pathlib import Path
 import click
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
+from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
+from jellyfin_media_normalizer.services.parse_service import ParseService
 from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
 from jellyfin_media_normalizer.utils.logging import get_logger, setup_logging
@@ -70,6 +73,55 @@ def scan(ctx: click.Context) -> None:
     preview_limit: int = min(10, len(media_items))
     for item in media_items[:preview_limit]:
         click.echo(f"- {item.relative_path}")
+
+
+@app.command()
+@click.pass_context
+def parse(ctx: click.Context) -> None:
+    """Scan and parse the media library and print a short summary."""
+    settings: Settings = ctx.obj["settings"]
+    scan_service: ScanService = ScanService(settings=settings)
+    parse_service: ParseService = ParseService(settings=settings)
+
+    media_items: list[MediaItem] = scan_service.run()
+    parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
+
+    click.echo(f"Parsed {len(parsed_items)} media files.")
+    preview_limit: int = min(10, len(parsed_items))
+    for item in parsed_items[:preview_limit]:
+        details: list[str] = [item.media_type, item.normalized_title]
+        if item.year is not None:
+            details.append(str(item.year))
+        if item.season is not None and item.episode is not None:
+            details.append(f"S{item.season:02d}E{item.episode:02d}")
+        click.echo(f"- {item.source.relative_path} => {' | '.join(details)}")
+
+
+@app.command(name="report-scan")
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Optional custom path for the JSON report.",
+)
+@click.pass_context
+def report_scan(ctx: click.Context, output_path: Path | None) -> None:
+    """Scan, parse and write a JSON report.
+
+    :param output_path: Optional custom path for the JSON report. If not provided,
+        defaults to 'reports/scan-report.json' in the workspace.
+    """
+    settings: Settings = ctx.obj["settings"]
+    scan_service: ScanService = ScanService(settings=settings)
+    parse_service: ParseService = ParseService(settings=settings)
+    reporter: JsonReporter = JsonReporter()
+
+    media_items: list[MediaItem] = scan_service.run()
+    parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
+    report_path: Path = output_path or (settings.reports_path / "scan-report.json")
+    written_path: Path = reporter.write(parsed_items, report_path)
+    click.echo(f"JSON report written to: {written_path}")
 
 
 @app.command()

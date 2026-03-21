@@ -34,9 +34,12 @@
         "addopts",
         "dataclasses",
         "docstrings",
+        "filmu",
         "httpx",
         "imdbid",
         "Jellyfin",
+        "Jméno",
+        "MULTISPACE",
         "pathlib",
         "Pokorny",
         "Pydantic",
@@ -51,6 +54,7 @@
         "TVDB",
         "tvdbid",
         "venv",
+        "Witcher",
         "Zdenek"
     ],
     "ignoreWords": [
@@ -72,7 +76,8 @@
         "ac3",
         "proper",
         "repack",
-        "remux"
+        "remux",
+        "delenv"
     ],
     "ignorePaths": [
         "package-lock.json",
