@@ -267,3 +267,31 @@ After completion, the media library should have:
 - controlled handling of uncertain matches
 
 The result should be a media library that is both easy to browse directly on disk and much more reliable when scanned by Jellyfin.
+
+## Project schema
+
+The project can be structured into the following modules:
+
+```
+src/jellyfin_media_normalizer/
+├── __init__.py
+├── main.py
+├── constants.py
+├── settings.py
+├── cli/
+│   ├── __init__.py
+│   └── app.py
+├── services/
+│   ├── __init__.py
+│   └── scan_service.py
+├── scanners/
+│   ├── __init__.py
+│   └── library_scanner.py
+├── models/
+│   ├── __init__.py
+│   └── media_item.py
+└── utils/
+    ├── __init__.py
+    ├── logging.py
+    └── paths.py
+```
