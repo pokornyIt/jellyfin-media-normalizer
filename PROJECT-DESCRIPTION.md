@@ -310,3 +310,12 @@ src/jellyfin_media_normalizer/
     ├── logging.py
     └── paths.py
 ```
+
+## CLI call example
+
+```bash
+uv run jellyfin-media-normalizer scan
+uv run jellyfin-media-normalizer parse
+uv run jellyfin-media-normalizer report-scan
+uv run jellyfin-media-normalizer report-scan --output /workspace/reports/custom-scan.json
+```
