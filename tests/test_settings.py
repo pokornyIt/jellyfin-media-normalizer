@@ -101,15 +101,15 @@ class TestSettingsFromEnv:
         ):
             monkeypatch.delenv(var, raising=False)
 
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
 
         assert settings.app_name == "jellyfin-media-normalizer"
-        assert settings.library_path == Path("/library")
-        assert settings.workspace_path == Path("/workspace")
-        assert settings.cache_path == Path("/workspace/cache")
-        assert settings.reports_path == Path("/workspace/reports")
-        assert settings.manifests_path == Path("/workspace/manifests")
-        assert settings.logs_path == Path("/workspace/logs")
+        assert settings.library_path == Path("./data/library")
+        assert settings.workspace_path == Path("./data/workspace")
+        assert settings.cache_path == Path("./data/workspace/cache")
+        assert settings.reports_path == Path("./data/workspace/reports")
+        assert settings.manifests_path == Path("./data/workspace/manifests")
+        assert settings.logs_path == Path("./data/workspace/logs")
         assert settings.log_level == "INFO"
         assert settings.log_format == "text"
         assert settings.dry_run is True

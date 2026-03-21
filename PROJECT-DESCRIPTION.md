@@ -295,9 +295,7 @@ src/jellyfin_media_normalizer/
 │   └── tv_episode_parser.py
 ├── reporters/
 │   ├── __init__.py
-│   └── json_reporter.py├── services/
-│   ├── __init__.py
-│   └── scan_service.py
+│   └── json_reporter.py
 ├── scanners/
 │   ├── __init__.py
 │   └── library_scanner.py
@@ -318,4 +316,10 @@ uv run jellyfin-media-normalizer scan
 uv run jellyfin-media-normalizer parse
 uv run jellyfin-media-normalizer report-scan
 uv run jellyfin-media-normalizer report-scan --output /workspace/reports/custom-scan.json
+
+# test commands
+uv run pytest
+
+# test with coverage report
+uv run pytest --cov=src/jellyfin_media_normalizer --cov-report=term-missing
 ```

@@ -44,11 +44,11 @@ class Settings:
 
         :return: Initialized settings instance.
         """
-        workspace_path: Path = Path(os.getenv("JMN_WORKSPACE_PATH", "/workspace"))
+        workspace_path: Path = Path(os.getenv("JMN_WORKSPACE_PATH", "./data/workspace"))
 
         return cls(
             app_name=os.getenv("JMN_APP_NAME", "jellyfin-media-normalizer"),
-            library_path=Path(os.getenv("JMN_LIBRARY_PATH", "/library")),
+            library_path=Path(os.getenv("JMN_LIBRARY_PATH", "./data/library")),
             workspace_path=workspace_path,
             cache_path=Path(os.getenv("JMN_CACHE_PATH", str(workspace_path / "cache"))),
             reports_path=Path(os.getenv("JMN_REPORTS_PATH", str(workspace_path / "reports"))),
