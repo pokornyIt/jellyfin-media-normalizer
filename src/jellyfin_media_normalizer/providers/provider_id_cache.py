@@ -52,13 +52,35 @@ class ProviderIdCacheResolver(LoggingMixin):
         """
         lookup_key: str | None = self.build_lookup_key(item)
         if lookup_key is None:
+            self.log.debug(
+                "Could not build cache lookup key",
+                extra={"extra": {"media_type": item.media_type, "title": item.normalized_title}},
+            )
             return None
 
+        self.log.debug(
+            "Looking up in cache",
+            extra={"extra": {"lookup_key": lookup_key}},
+        )
         entries: dict[str, ProviderMatch] = self._load_cache_entries()
         cached_match: ProviderMatch | None = entries.get(lookup_key)
         if cached_match is None:
+            self.log.debug(
+                "No cache entry found",
+                extra={"extra": {"lookup_key": lookup_key}},
+            )
             return None
 
+        self.log.debug(
+            "Cache hit",
+            extra={
+                "extra": {
+                    "lookup_key": lookup_key,
+                    "provider": cached_match.provider,
+                    "provider_id": cached_match.provider_id,
+                }
+            },
+        )
         return ProviderMatch(
             provider=cached_match.provider,
             provider_id=cached_match.provider_id,
@@ -144,6 +166,16 @@ class ProviderIdCacheResolver(LoggingMixin):
         :param match: Provider match to persist.
         :return: Persisted match with canonical lookup key and cache reason.
         """
+        self.log.debug(
+            "Storing lookup result in cache",
+            extra={
+                "extra": {
+                    "lookup_key": lookup_key,
+                    "provider": match.provider,
+                    "provider_id": match.provider_id,
+                }
+            },
+        )
         entries: dict[str, ProviderMatch] = self._load_cache_entries()
         persisted_match: ProviderMatch = ProviderMatch(
             provider=match.provider,

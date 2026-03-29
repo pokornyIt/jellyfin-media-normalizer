@@ -72,6 +72,10 @@ class OnlineProviderResolver(LoggingMixin):
         """
         lookup_key: str | None = self.cache_resolver.build_lookup_key(item)
         if lookup_key is None:
+            self.log.debug(
+                "Could not build lookup key for online resolution",
+                extra={"extra": {"media_type": item.media_type, "title": item.normalized_title}},
+            )
             return None
 
         if item.media_type == "movie":
@@ -91,19 +95,58 @@ class OnlineProviderResolver(LoggingMixin):
         :param lookup_key: Cache lookup key.
         :return: Provider match or ``None``.
         """
+        self.log.debug(
+            "Resolving movie online",
+            extra={
+                "extra": {
+                    "title": item.normalized_title,
+                    "year": item.year,
+                    "clients_count": len(self.movie_clients),
+                }
+            },
+        )
         for client in self.movie_clients:
+            self.log.debug(
+                "Trying movie client",
+                extra={
+                    "extra": {"client": client.__class__.__name__, "title": item.normalized_title}
+                },
+            )
             match: ProviderMatch | None = client.search_movie(
                 title=item.normalized_title,
                 year=item.year,
             )
             if match is None:
+                self.log.debug(
+                    "Movie client returned no match",
+                    extra={
+                        "extra": {
+                            "client": client.__class__.__name__,
+                            "title": item.normalized_title,
+                        }
+                    },
+                )
                 continue
 
             persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(
                 lookup_key, match
             )
+            self.log.debug(
+                "Movie provider ID cached",
+                extra={
+                    "extra": {
+                        "provider": match.provider,
+                        "provider_id": match.provider_id,
+                        "title": item.normalized_title,
+                    }
+                },
+            )
             return persisted_match
 
+        self.log.debug(
+            "No movie clients found provider ID",
+            extra={"extra": {"title": item.normalized_title}},
+        )
         return None
 
     def _resolve_tv_series(self, item: ParsedMediaItem, lookup_key: str) -> ProviderMatch | None:
@@ -113,16 +156,54 @@ class OnlineProviderResolver(LoggingMixin):
         :param lookup_key: Cache lookup key.
         :return: Provider match or ``None``.
         """
+        self.log.debug(
+            "Resolving TV series online",
+            extra={
+                "extra": {
+                    "title": item.normalized_title,
+                    "clients_count": len(self.tv_series_clients),
+                }
+            },
+        )
         for client in self.tv_series_clients:
+            self.log.debug(
+                "Trying TV series client",
+                extra={
+                    "extra": {"client": client.__class__.__name__, "title": item.normalized_title}
+                },
+            )
             match: ProviderMatch | None = client.search_tv_series(title=item.normalized_title)
             if match is None:
+                self.log.debug(
+                    "TV series client returned no match",
+                    extra={
+                        "extra": {
+                            "client": client.__class__.__name__,
+                            "title": item.normalized_title,
+                        }
+                    },
+                )
                 continue
 
             persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(
                 lookup_key, match
             )
+            self.log.debug(
+                "TV series provider ID cached",
+                extra={
+                    "extra": {
+                        "provider": match.provider,
+                        "provider_id": match.provider_id,
+                        "title": item.normalized_title,
+                    }
+                },
+            )
             return persisted_match
 
+        self.log.debug(
+            "No TV series clients found provider ID",
+            extra={"extra": {"title": item.normalized_title}},
+        )
         return None
 
     def _build_movie_clients(self) -> list[MovieLookupClientProtocol]:
@@ -132,7 +213,16 @@ class OnlineProviderResolver(LoggingMixin):
         """
         clients: list[MovieLookupClientProtocol] = []
         if self.settings.tmdb_api_key is not None:
+            self.log.debug(
+                "Adding TMDb client for movie lookup",
+                extra={"extra": {}},
+            )
             clients.append(TmdbClient(api_key=self.settings.tmdb_api_key))
+        else:
+            self.log.debug(
+                "TMDb API key not configured, skipping TMDb client",
+                extra={"extra": {}},
+            )
         return clients
 
     def _build_tv_series_clients(self) -> list[TvSeriesLookupClientProtocol]:
@@ -142,7 +232,25 @@ class OnlineProviderResolver(LoggingMixin):
         """
         clients: list[TvSeriesLookupClientProtocol] = []
         if self.settings.tmdb_api_key is not None:
+            self.log.debug(
+                "Adding TMDb client for TV series lookup",
+                extra={"extra": {}},
+            )
             clients.append(TmdbClient(api_key=self.settings.tmdb_api_key))
+        else:
+            self.log.debug(
+                "TMDb API key not configured for TV series lookup",
+                extra={"extra": {}},
+            )
         if self.settings.tvdb_api_key is not None:
+            self.log.debug(
+                "Adding TVDB client for TV series lookup",
+                extra={"extra": {}},
+            )
             clients.append(TvdbClient(api_key=self.settings.tvdb_api_key))
+        else:
+            self.log.debug(
+                "TVDB API key not configured for TV series lookup",
+                extra={"extra": {}},
+            )
         return clients
