@@ -33,6 +33,7 @@ def _make_settings(workspace_path: Path | None = None) -> Settings:
         dry_run=True,
         tmdb_api_key=None,
         tvdb_api_key=None,
+        provider_lookup_progress_interval=100,
     )
 
 

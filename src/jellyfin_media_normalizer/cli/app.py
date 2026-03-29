@@ -12,6 +12,7 @@ from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
 from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
+from jellyfin_media_normalizer.reporters.unresolved_reporter import UnresolvedReporter
 from jellyfin_media_normalizer.services.parse_service import ParseService
 from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
@@ -92,6 +93,7 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     scan_service: ScanService = ScanService(settings=settings)
     parse_service: ParseService = ParseService(settings=settings)
     reporter: ReviewReporter = ReviewReporter()
+    unresolved_reporter: UnresolvedReporter = UnresolvedReporter()
 
     media_items: list[MediaItem] = scan_service.run()
     parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
@@ -107,9 +109,30 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
         f"passed={passed_count}, review_needed={review_count}, failed={failed_count}"
     )
 
+    resolved_count: int = sum(1 for item in parsed_items if item.provider_match is not None)
+    cache_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and item.provider_match.reason.startswith("cache_exact_key:")
+    )
+    online_count: int = resolved_count - cache_count
+    unresolved_count: int = sum(
+        1 for item in parsed_items if item.provider_match is None and item.media_type != "unknown"
+    )
+    click.echo(
+        "Provider lookup summary: "
+        f"resolved={resolved_count} (cache={cache_count}, online={online_count}), "
+        f"unresolved={unresolved_count}"
+    )
+
     report_path: Path = output_path or (settings.reports_path / "parse-review-report.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"Review report written to: {written_path}")
+
+    unresolved_path: Path = settings.reports_path / "unresolved-provider-report.json"
+    written_unresolved_path: Path = unresolved_reporter.write(parsed_items, unresolved_path)
+    click.echo(f"Unresolved provider report written to: {written_unresolved_path}")
 
 
 @app.command(name="report-scan")

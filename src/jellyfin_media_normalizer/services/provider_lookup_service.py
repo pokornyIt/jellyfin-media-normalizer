@@ -29,6 +29,7 @@ class ProviderLookupService(LoggingMixin):
         """
         self.settings: Settings = settings
         self.resolver: ResolverProtocol = resolver or self._build_default_resolver()
+        self.progress_interval: int = settings.provider_lookup_progress_interval
 
     def run(self, media_items: list[ParsedMediaItem]) -> list[ParsedMediaItem]:
         """Resolve provider IDs for all parsed items.
@@ -41,27 +42,51 @@ class ProviderLookupService(LoggingMixin):
             extra={"extra": {"item_count": len(media_items)}},
         )
 
+        total: int = len(media_items)
         resolved_count: int = 0
-        for item in media_items:
+        cache_count: int = 0
+        online_count: int = 0
+
+        for processed, item in enumerate(media_items, start=1):
             if item.media_type == "unknown":
                 _append_issue(item, "Provider lookup skipped for unknown media type.")
-                continue
+            else:
+                match: ProviderMatch | None = self.resolver.resolve(item)
+                if match is None:
+                    _append_issue(
+                        item, "Provider ID not found in provider cache or online providers."
+                    )
+                else:
+                    item.provider_match = match
+                    resolved_count += 1
+                    if match.reason.startswith("cache_exact_key:"):
+                        cache_count += 1
+                    else:
+                        online_count += 1
 
-            match: ProviderMatch | None = self.resolver.resolve(item)
-            if match is None:
-                _append_issue(item, "Provider ID not found in provider cache or online providers.")
-                continue
+            if processed % self.progress_interval == 0:
+                self.log.info(
+                    "Provider lookup progress",
+                    extra={
+                        "extra": {
+                            "processed": processed,
+                            "total": total,
+                            "resolved": resolved_count,
+                            "unresolved": processed - resolved_count,
+                        }
+                    },
+                )
 
-            item.provider_match = match
-            resolved_count += 1
-
+        unresolved_count: int = total - resolved_count
         self.log.info(
             "Provider lookup service finished",
             extra={
                 "extra": {
-                    "item_count": len(media_items),
+                    "item_count": total,
                     "resolved_count": resolved_count,
-                    "unresolved_count": len(media_items) - resolved_count,
+                    "cache_count": cache_count,
+                    "online_count": online_count,
+                    "unresolved_count": unresolved_count,
                 }
             },
         )
