@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.models.provider_match import ProviderMatch
 from jellyfin_media_normalizer.services.parse_service import ParseService
 from jellyfin_media_normalizer.settings import Settings
 
@@ -76,6 +77,31 @@ class _FakeMediaParser:
             year=2000,
             confidence=0.5,
         )
+
+
+class _FakeProviderLookupService:
+    """Fake provider lookup for ParseService integration tests."""
+
+    def __init__(self) -> None:
+        """Initialize fake lookup service."""
+        self.calls: int = 0
+
+    def run(self, media_items: list[ParsedMediaItem]) -> list[ParsedMediaItem]:
+        """Attach deterministic provider ID and return items.
+
+        :param media_items: Parsed and validated media items.
+        :return: Same list enriched with provider match.
+        """
+        self.calls += 1
+        for item in media_items:
+            item.provider_match = ProviderMatch(
+                provider="tmdb",
+                provider_id="42",
+                confidence=0.9,
+                reason="test_lookup",
+                lookup_key="movie|injected|2000",
+            )
+        return media_items
 
 
 class TestParseServiceInitialization:
@@ -313,3 +339,19 @@ class TestParseServiceRun:
 
         assert result1[0].year == 2009
         assert result2[0].year == 1999
+
+    def test_run_invokes_provider_lookup_stage(self) -> None:
+        """Run invokes provider lookup after validation.
+
+        :return: None
+        """
+        settings: Settings = _make_settings()
+        provider_lookup = _FakeProviderLookupService()
+        service = ParseService(settings=settings, provider_lookup=provider_lookup)  # pyright: ignore[reportArgumentType]
+        items: list[MediaItem] = [_make_media_item(path="/library/Avatar.2009.mkv")]
+
+        result: list[ParsedMediaItem] = service.run(media_items=items)
+
+        assert provider_lookup.calls == 1
+        assert result[0].provider_match is not None
+        assert result[0].provider_match.provider == "tmdb"

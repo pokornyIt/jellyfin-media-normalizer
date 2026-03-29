@@ -7,6 +7,7 @@ from typing import Protocol
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.parsers.media_parser import MediaParser
+from jellyfin_media_normalizer.services.provider_lookup_service import ProviderLookupService
 from jellyfin_media_normalizer.settings import Settings
 from jellyfin_media_normalizer.utils.logging import LoggingMixin
 from jellyfin_media_normalizer.validators.validation_service import ValidationService
@@ -32,16 +33,21 @@ class ParseService(LoggingMixin):
         settings: Settings,
         parser: MediaItemParserProtocol | None = None,
         validator: ValidationService | None = None,
+        provider_lookup: ProviderLookupService | None = None,
     ) -> None:
         """Initialize the service.
 
         :param settings: Application settings to use for parsing context.
         :param parser: Optional media parser implementation.
         :param validator: Optional validation service.
+        :param provider_lookup: Optional provider lookup service.
         """
         self.settings: Settings = settings
         self.parser: MediaItemParserProtocol = parser or MediaParser()
         self.validator: ValidationService = validator or ValidationService()
+        self.provider_lookup: ProviderLookupService = provider_lookup or ProviderLookupService(
+            settings=settings
+        )
 
     def run(self, media_items: list[MediaItem]) -> list[ParsedMediaItem]:
         """Run the parsing and validation process on a list of media items.
@@ -55,5 +61,6 @@ class ParseService(LoggingMixin):
 
         # Run validation on parsed items
         validated_items: list[ParsedMediaItem] = self.validator.run(parsed_items)
+        resolved_items: list[ParsedMediaItem] = self.provider_lookup.run(validated_items)
 
-        return validated_items
+        return resolved_items

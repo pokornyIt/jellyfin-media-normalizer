@@ -106,7 +106,7 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
         f"passed={passed_count}, review_needed={review_count}, failed={failed_count}"
     )
 
-    report_path: Path = output_path or (settings.reports_path / "review-report.json")
+    report_path: Path = output_path or (settings.reports_path / "parse-review-report.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"Review report written to: {written_path}")
 
@@ -133,7 +133,7 @@ def report_scan(ctx: click.Context, output_path: Path | None) -> None:
 
     media_items: list[MediaItem] = scan_service.run()
     parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
-    report_path: Path = output_path or (settings.reports_path / "scan-report.json")
+    report_path: Path = output_path or (settings.reports_path / "report-scan-results.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"JSON report written to: {written_path}")
 
