@@ -10,7 +10,7 @@ from pathlib import Path
 class FilenameCleaner:
     """Clean raw media filenames before parsing."""
 
-    _SEPARATORS_PATTERN: re.Pattern[str] = re.compile(r"[._]+")
+    _SEPARATORS_PATTERN: re.Pattern[str] = re.compile(r"[._\+]+")
     _MULTISPACE_PATTERN: re.Pattern[str] = re.compile(r"\s+")
     _RELEASE_TAGS_PATTERN: re.Pattern[str] = re.compile(
         r"\b("
@@ -29,6 +29,9 @@ class FilenameCleaner:
         """
         stem: str = Path(filename).stem
         normalized: str = self._SEPARATORS_PATTERN.sub(" ", stem)
+        # Handle multiplication sign as 'x' in season/episode markers
+        normalized = normalized.replace("\u00d7", "x")
+
         normalized = self._RELEASE_TAGS_PATTERN.sub(" ", normalized)
         normalized = self._transliterate(normalized)
         normalized = self._MULTISPACE_PATTERN.sub(" ", normalized).strip()

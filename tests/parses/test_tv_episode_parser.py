@@ -196,6 +196,27 @@ class TestTvEpisodeParserHyphenFormat:
                 1,
                 1,
             ),
+            (
+                "Kriminalka Las Vegas 01x08-neznamy.avi",
+                "Kriminalka Las Vegas 01x08-neznamy",
+                "Kriminalka Las Vegas",
+                1,
+                8,
+            ),
+            (
+                "NCIS S13-E13 Deja Vu.avi",
+                "NCIS S13-E13 Deja Vu",
+                "NCIS",
+                13,
+                13,
+            ),
+            (
+                "Policie Modrava s03e1. Maily ze zahrobi.avi",
+                "Policie Modrava s03e1. Maily ze zahrobi",
+                "Policie Modrava",
+                3,
+                1,
+            ),
         ],
     )
     def test_parse_hyphen_format(

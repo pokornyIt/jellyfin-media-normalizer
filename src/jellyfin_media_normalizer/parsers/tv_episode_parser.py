@@ -13,10 +13,13 @@ class TvEpisodeParser:
     """Parse normalized TV episode filenames."""
 
     _TV_PATTERN: re.Pattern[str] = re.compile(
-        r"\bS(?P<season>\d{2})E(?P<episode>\d{2})\b", re.IGNORECASE
+        r"\bS(?P<season>\d{2})E(?P<episode>\d{1,2})\b", re.IGNORECASE
     )
-    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(
-        r"(?:^|-)(?P<season>\d{1,2})x(?P<episode>\d{2})(?=-|$)", re.IGNORECASE
+    _TV_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
+        r"\bS(?P<season>\d{2})[ -]?E(?P<episode>\d{1,2})\b", re.IGNORECASE
+    )
+    _TV_PATTERN_SEPARATOR: re.Pattern[str] = re.compile(
+        r"(?:^|[\s-])(?P<season>\d{1,2})[-_x](?P<episode>\d{1,2})(?=\s|-|$)", re.IGNORECASE
     )
     _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
     _LANGUAGE_PATTERN: re.Pattern[str] = re.compile(r"(?:^| - )(?P<lang>[A-Z]{2})(?:$| )")
@@ -34,9 +37,13 @@ class TvEpisodeParser:
         if tv_match is not None:
             return self._parse_sxxexx(raw_name, normalized_name, tv_match)
 
-        hyphen_match: re.Match[str] | None = self._TV_HYPHEN_PATTERN.search(normalized_name)
+        tv_match = self._TV_PATTERN_SEPARATED.search(normalized_name)
+        if tv_match is not None:
+            return self._parse_sxxexx(raw_name, normalized_name, tv_match)
+
+        hyphen_match: re.Match[str] | None = self._TV_PATTERN_SEPARATOR.search(normalized_name)
         if hyphen_match is not None:
-            return self._parse_hyphen_format(raw_name, normalized_name, hyphen_match)
+            return self._parse_separator_format(raw_name, normalized_name, hyphen_match)
 
         return ParsedName(
             media_type=MediaType.UNKNOWN,
@@ -94,7 +101,7 @@ class TvEpisodeParser:
             confidence=confidence,
         )
 
-    def _parse_hyphen_format(
+    def _parse_separator_format(
         self,
         raw_name: str,
         normalized_name: str,
@@ -114,7 +121,7 @@ class TvEpisodeParser:
         season: int = int(hyphen_match.group("season"))
         episode: int = int(hyphen_match.group("episode"))
 
-        title_raw: str = normalized_name[: hyphen_match.start()].strip("-")
+        title_raw: str = normalized_name[: hyphen_match.start()].strip(" -")
         title: str | None = title_raw.replace("-", " ").strip() or None
 
         confidence: float = 0.90 if title else 0.65

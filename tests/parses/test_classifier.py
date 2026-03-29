@@ -18,8 +18,12 @@ class TestClassifier:
             ("breaking.bad.s01e02.1080p", MediaType.TV_EPISODE),
             ("Dark - s03e08 - DE", MediaType.TV_EPISODE),
             ("Beze-stopy-03x02-Nezabijes", MediaType.TV_EPISODE),
+            ("Kriminalka Las Vegas 01x08-neznamy", MediaType.TV_EPISODE),
+            ("Kriminalka Las Vegas 08x05 Smrt na sekeru", MediaType.TV_EPISODE),
             ("Series-01x01-Episode-title", MediaType.TV_EPISODE),
+            ("NCIS S13-E13 Deja Vu", MediaType.TV_EPISODE),
             ("Some-Show-12x15-ep", MediaType.TV_EPISODE),
+            ("Policie Modrava s03e1. Maily ze zahrobi", MediaType.TV_EPISODE),
             ("Movie Title 1999", MediaType.MOVIE),
             ("Avatar 2009 EN", MediaType.MOVIE),
             ("Some Documentary 2100", MediaType.MOVIE),
@@ -56,6 +60,7 @@ class TestClassifier:
         [
             "Beze-stopy-03x02-Nezabijes",
             "Some-Series-01x05-Episode",
+            "Kriminalka Las Vegas 01x08-neznamy",
         ],
     )
     def test_hyphen_format_classified_as_tv(self, name: str) -> None:

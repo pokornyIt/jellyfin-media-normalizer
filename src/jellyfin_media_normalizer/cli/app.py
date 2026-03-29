@@ -110,17 +110,6 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"Review report written to: {written_path}")
 
-    preview_limit: int = min(10, len(parsed_items))
-    for item in parsed_items[:preview_limit]:
-        details: list[str] = [item.media_type, item.normalized_title]
-        if item.year is not None:
-            details.append(str(item.year))
-        if item.season is not None and item.episode is not None:
-            details.append(f"S{item.season:02d}E{item.episode:02d}")
-        details.append(f"validation={item.validation_status.value}")
-        details.append(f"confidence={item.validation_confidence.value}")
-        click.echo(f"- {item.source.relative_path} => {' | '.join(details)}")
-
 
 @app.command(name="report-scan")
 @click.option(

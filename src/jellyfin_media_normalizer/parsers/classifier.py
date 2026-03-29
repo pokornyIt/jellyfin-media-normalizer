@@ -10,8 +10,16 @@ from jellyfin_media_normalizer.models.media_type import MediaType
 class Classifier:
     """Classify media filenames."""
 
-    _TV_PATTERN: re.Pattern[str] = re.compile(r"\bS(\d{2})E(\d{2})\b", re.IGNORECASE)
-    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(r"(?:^|-)\d{1,2}x\d{2}(?=-|$)", re.IGNORECASE)
+    _TV_PATTERN: re.Pattern[str] = re.compile(r"\bS(\d{2})E(\d{1,2})\b", re.IGNORECASE)
+    _TV_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
+        r"\bS(\d{2})[ -]?E(\d{1,2})\b", re.IGNORECASE
+    )
+    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(
+        r"(?:^|[\s-])\d{1,2}x\d{1,2}(?=\s|-|$)", re.IGNORECASE
+    )
+    _TV_HYPHEN_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
+        r"(?:^|[\s-])\d{1,2}[-_x]\d{1,2}(?=\s|-|$)", re.IGNORECASE
+    )
     _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
 
     def classify(self, name: str) -> MediaType:
@@ -23,7 +31,13 @@ class Classifier:
         if self._TV_PATTERN.search(name):
             return MediaType.TV_EPISODE
 
-        if self._TV_HYPHEN_PATTERN.search(name):
+        if self._TV_PATTERN_SEPARATED.search(name):
+            return MediaType.TV_EPISODE
+
+        # if self._TV_HYPHEN_PATTERN.search(name):
+        #     return MediaType.TV_EPISODE
+
+        if self._TV_HYPHEN_PATTERN_SEPARATED.search(name):
             return MediaType.TV_EPISODE
 
         if self._YEAR_PATTERN.search(name):
