@@ -1,284 +1,227 @@
 # jellyfin-media-normalizer
 
-Normalize movie and TV series names for Jellyfin, validate matches, and add provider IDs for reliable library identification.
+Normalize movie and TV series names for Jellyfin. Scans a media library, classifies files, validates parsed results, and looks up provider IDs from TMDb and TVDB.
 
-## Overview
+For the full project design, naming conventions, and implementation phases, see [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md).
 
-`jellyfin-media-normalizer` is a project intended to clean up and standardize a large media library before it is imported into Jellyfin.
+## Requirements
 
-The project focuses on:
+- Python 3.14.2
+- [uv](https://github.com/astral-sh/uv) for dependency management
 
-- scanning an existing media library
-- classifying files as movies, TV series episodes, or unknown items
-- normalizing file and folder names into a consistent format
-- validating parsed results before any rename is executed
-- looking up a single provider ID for movies and TV series
-- preparing safe batch rename plans
+## Installation
 
-The goal is to keep the media library readable on disk while also improving Jellyfin recognition and matching.
+```bash
+git clone https://github.com/pokornyIt/jellyfin-media-normalizer.git
+cd jellyfin-media-normalizer
+uv sync
+```
 
-## Main Principles
+## Quick Start
 
-- No `.nfo` files
-- Only one provider ID per movie or TV series
-- No episode-level IDs in filenames
-- No automatic rename without validation
-- No direct bulk rename without a generated plan
-- Safe execution in logical batches
+```bash
+# Scan only — no API keys needed
+uv run jellyfin-media-normalizer scan
 
-## Naming Rules
+# Full parse with provider lookup — requires API keys
+export $(cat .env | grep -v '^#' | xargs)
+uv run jellyfin-media-normalizer parse
+```
 
-### Movies
-
-Movie filenames:
-
-- `Czech Title (Year) - CZ.ext`
-- `Czech Title (Year) - EN (tit. CZ).ext`
-
-Movie folder names:
-
-- `Czech Title (Year) [imdbid-tt1234567]`
-- `Czech Title (Year) [tmdbid-12345]`
-
-### TV Series
-
-Series folder names:
-
-- `Series Name [tvdbid-12345]`
-- `Series Name [tmdbid-12345]`
-
-Episode filenames:
-
-- `Czech Episode Title S01E02 - CZ.ext`
-- `Czech Episode Title S01E02 - EN (tit. CZ).ext`
-
-Notes:
-
-- TV series folder names do not contain the year
-- Episode filenames do not contain IDs
-- Language markers always use two-letter codes such as `CZ`, `EN`, `DE`
-
-## Core Features
-
-### Library Scan
-
-The project starts by scanning the media library and collecting information about files, folders, and naming patterns.
-
-### Classification
-
-Each item is classified as:
-
-- movie
-- TV episode
-- unknown
-- manual review required
-
-### Name Normalization
-
-Parsed names are converted into a unified internal representation that can be used for validation, provider ID lookup, and rename planning.
-
-### Validation
-
-Only sufficiently reliable matches should be allowed to continue automatically. Ambiguous items must be marked for manual review.
-
-### Provider ID Lookup
-
-The project looks up a single recommended provider ID:
-
-- movies: typically TMDb or IMDb ID
-- TV series: typically TVDB or TMDb ID
-
-Only one final ID is stored in the folder name.
-
-### Rename Planning
-
-The project generates a rename manifest containing original paths, proposed new paths, confidence information, and action status.
-
-### Batch Rename Execution
-
-Renaming is executed only after review and only in controlled batches.
+The `parse` command:
+1. Scans the media library
+2. Classifies and normalizes filenames
+3. Validates parsed results
+4. Looks up provider IDs (TMDb, TVDB) — first checks embedded IDs in folder names, then the local cache, then online APIs
+5. Writes `data/workspace/reports/parse-review-report.json`
+6. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
 
 ## Configuration
 
-### Quick Start
+All settings are read from environment variables. Create a `.env` file in the project root:
 
-Once you have configured the API keys in a `.env` file, start the parsing and online provider lookup with:
+```ini
+# Paths
+JMN_LIBRARY_PATH=./data/library
+JMN_WORKSPACE_PATH=./data/workspace
 
-```bash
-# Load .env and run parse command with online provider lookup
-export $(cat .env | grep -v '^#' | xargs) && uv run jellyfin-media-normalizer parse
+# Logging
+JMN_LOG_LEVEL=INFO
+JMN_LOG_FORMAT=text
+
+# Safety
+JMN_DRY_RUN=true
+
+# Provider API keys
+JMN_TMDB_API_KEY=your-tmdb-api-key
+JMN_TVDB_API_KEY=your-tvdb-api-key
+
+# How often to log provider lookup progress (default: every 100 items)
+JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 ```
 
-This will:
-1. Scan your media library
-2. Parse and classify files and folders
-3. Validate parsed results
-4. Look up provider IDs online (if API keys are configured)
-5. Generate a review report to `data/workspace/reports/parse-review-report.json`
+### Full environment variable reference
 
-### Provider API Keys
+| Variable                                | Default                     | Description                                         |
+| --------------------------------------- | --------------------------- | --------------------------------------------------- |
+| `JMN_APP_NAME`                          | `jellyfin-media-normalizer` | Application name used in logs                       |
+| `JMN_LIBRARY_PATH`                      | `./data/library`            | Root path of the media library to scan              |
+| `JMN_WORKSPACE_PATH`                    | `./data/workspace`          | Root path for generated files                       |
+| `JMN_CACHE_PATH`                        | `{workspace}/cache`         | Provider ID cache directory                         |
+| `JMN_REPORTS_PATH`                      | `{workspace}/reports`       | Report output directory                             |
+| `JMN_MANIFESTS_PATH`                    | `{workspace}/manifests`     | Rename manifest directory                           |
+| `JMN_LOGS_PATH`                         | `{workspace}/logs`          | Log file directory                                  |
+| `JMN_LOG_LEVEL`                         | `INFO`                      | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `JMN_LOG_FORMAT`                        | `text`                      | Log format (`text` or `json`)                       |
+| `JMN_DRY_RUN`                           | `true`                      | Disable destructive operations by default           |
+| `JMN_TMDB_API_KEY`                      | *(none)*                    | TMDb API key for online movie lookup                |
+| `JMN_TVDB_API_KEY`                      | *(none)*                    | TVDB API key for online TV series lookup            |
+| `JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Log progress every N items during provider lookup   |
 
-The project uses TMDb and TVDB APIs for online provider ID lookup. To enable online matching, configure the following environment variables:
+### TMDb API Key
 
-#### TMDb API Key
+1. Register at [themoviedb.org](https://www.themoviedb.org/) and create a free account.
+2. Go to **Settings → API** and copy your **API Key (v3 auth)**.
+3. Set `JMN_TMDB_API_KEY` to that value.
 
-1. Visit [The Movie Database (TMDb)](https://www.themoviedb.org/) and create a free account
-2. Go to **Settings → API** in your account dashboard
-3. Copy your **API Key (v3 auth)**
-4. Set the environment variable:
+### TVDB API Key
 
-```bash
-export JMN_TMDB_API_KEY="your-tmdb-api-key-here"
-```
+TVDB API keys are **project-based**, not personal. You must register your application:
 
-#### TVDB API Key
-
-1. Visit [TheTVDB.com API Information](https://www.thetvdb.com/api-information)
-2. Create a free account (if you don't have one)
-3. Click **Sign Up** to register a new project
-4. Fill in the registration form with the following information:
+1. Visit [thetvdb.com/api-information](https://www.thetvdb.com/api-information) and create an account.
+2. Click **Sign Up** to register a new project and fill in:
    - **Company / Project Revenue:** `Less than $50k per year`
    - **Company or Project Name:** `jellyfin-media-normalizer`
    - **Description:**
      ```
-     Non-commercial open-source tool for automatically normalizing and validating
-     media library names for Jellyfin. Uses TVDB provider data for matching TV series metadata.
+     Non-commercial open-source tool for normalizing and validating media library
+     names for Jellyfin. Uses TVDB data for TV series metadata matching.
      Project: https://github.com/pokornyIt/jellyfin-media-normalizer
      ```
-5. Copy the **API Key** provided for your project
-6. Set the environment variable:
+3. Copy the **API Key** and set `JMN_TVDB_API_KEY` to that value.
 
-```bash
-export JMN_TVDB_API_KEY="your-tvdb-api-key-here"
-```
+TVDB's free tier requires attribution. Comply with their [licensing terms](https://www.thetvdb.com/api-information).
 
-**Licensing Note:** TVDB's free tier requires attribution. Ensure you include proper attribution in your documentation and comply with their [licensing terms](https://www.thetvdb.com/api-information).
-
-**Note:** TVDB API keys are project-based, not person-based. You need to register your application as a project to obtain an API key.
-
-#### Applying Configuration
-
-Once API keys are set, the online provider resolver will automatically use them during lookup:
-
-```bash
-# Option 1: Set environment variables in current shell
-export JMN_TMDB_API_KEY="your-tmdb-api-key-here"
-export JMN_TVDB_API_KEY="your-tvdb-api-key-here"
-uv run jellyfin-media-normalizer parse
-
-# Option 2: Set in .env file (if using a tool like python-dotenv)
-echo "JMN_TMDB_API_KEY=your-tmdb-api-key-here" >> .env
-echo "JMN_TVDB_API_KEY=your-tvdb-api-key-here" >> .env
-uv run jellyfin-media-normalizer parse
-
-# Option 3: Docker environment (if running in container)
-docker run \
-  -e JMN_TMDB_API_KEY="your-tmdb-api-key-here" \
-  -e JMN_TVDB_API_KEY="your-tvdb-api-key-here" \
-  jellyfin-media-normalizer:latest parse
-```
-
-**Note:** If API keys are not configured, the lookup chain will use only the local provider cache. This is suitable for re-processing previously matched items but will not add new matches from online sources.
-
-## Development Stack
-
-| Tool                                            | Purpose                               |
-| ----------------------------------------------- | ------------------------------------- |
-| Python 3.14.2                                   | Core implementation language          |
-| [uv](https://github.com/astral-sh/uv)           | Dependency and environment management |
-| [ruff](https://github.com/astral-sh/ruff)       | Linting and formatting                |
-| [pyright](https://github.com/microsoft/pyright) | Static type checking                  |
-| [pytest](https://pytest.org)                    | Test framework                        |
+**Note:** Without API keys, provider lookup uses only the local cache. Previously resolved items are still matched; new items are left unresolved.
 
 ## CLI Commands
 
-The application provides several command-line utilities for scanning, parsing, validating, and reporting on your media library:
-
 ### `scan`
 
-Scan the media library and print a summary of discovered files.
+Scans the media library and prints a summary.
 
 ```bash
 uv run jellyfin-media-normalizer scan
 ```
 
-Outputs:
-- Total count of discovered media files
-- Preview of first 10 files with relative paths
+Output:
+```
+Discovered 13342 media files.
+- Filmy/Akcni/Avatar (2009) - CZ.mkv
+...
+```
+
+---
 
 ### `parse`
 
-Scan, parse, classify, validate, and perform provider ID lookup. Generates a detailed review report.
+Scans, parses, validates, and performs provider ID lookup. This is the main analysis command.
 
 ```bash
-# With API keys loaded from .env
-export $(cat .env | grep -v '^#' | xargs) && uv run jellyfin-media-normalizer parse
+export $(cat .env | grep -v '^#' | xargs)
+uv run jellyfin-media-normalizer parse
 
-# Or with inline environment variables
-JMN_TMDB_API_KEY="your-key" JMN_TVDB_API_KEY="your-key" uv run jellyfin-media-normalizer parse
+# or with custom report path
+uv run jellyfin-media-normalizer parse --output /path/to/custom-report.json
 ```
 
-Outputs:
-- Validation summary (passed, review_needed, failed counts)
-- Review report to `data/workspace/reports/parse-review-report.json`
+Output:
+```
+Parsed 13342 media files.
+Validation summary: passed=13127, review_needed=215, failed=0
+Provider lookup summary: resolved=12697 (cache=12695, online=0, embedded=2), unresolved=430
+Review report written to: data/workspace/reports/parse-review-report.json
+Unresolved provider report written to: data/workspace/reports/unresolved-provider-report.json
+```
 
-**Note:** This is the main command for analyzing your library and discovering provider matches.
+Provider ID resolution order:
+1. Embedded ID in folder name — e.g. `[imdbid-tt1234567]` or `[tmdbid-12345]`
+2. Local provider cache (`data/workspace/cache/provider_ids.json`)
+3. Online API (TMDb or TVDB, if API keys are configured)
+
+---
 
 ### `report-scan`
 
-Scan, parse, and generate a JSON report of results.
+Scans and parses, then writes a full JSON report of all parsed items.
 
 ```bash
-uv run jellyfin-media-normalizer report-scan [--output /custom/path/report.json]
+uv run jellyfin-media-normalizer report-scan
+uv run jellyfin-media-normalizer report-scan --output /custom/path/report.json
 ```
 
-Outputs:
-- JSON report to `data/workspace/reports/report-scan-results.json` (or custom path)
+Default output: `data/workspace/reports/report-scan-results.json`
+
+---
 
 ### `bootstrap-providers`
 
-Initialize or refresh the provider cache file. Useful for resetting cached provider matches.
+Initializes an empty provider cache file. Use this to reset cached provider matches.
 
 ```bash
 uv run jellyfin-media-normalizer bootstrap-providers
 ```
 
-Outputs:
-- Empty provider cache at `data/workspace/cache/provider_ids.json`
+Output:
+```
+Provider cache bootstrapped: data/workspace/cache/provider_ids.json
+```
+
+---
 
 ### `info`
 
-Display current runtime settings and configuration.
+Displays current runtime settings.
 
 ```bash
 uv run jellyfin-media-normalizer info
 ```
 
-Shows all active settings including:
-- Library and workspace paths
-- Cache, reports, and logs directories
-- Log level and format
-- API keys status (configured or not)
-- Dry-run mode setting
+---
 
 ### `validate-path`
 
-Validate an arbitrary path for diagnostics (useful for testing).
+Checks whether a given path exists on the filesystem. Useful for diagnosing path configuration.
 
 ```bash
 uv run jellyfin-media-normalizer validate-path /path/to/check
 ```
 
-## Technical Approach
+## Development
 
-The recommended implementation is:
+### Stack
 
-- core logic in Python
-- rename execution via filesystem operations over mounted storage or shell/SSH
-- strict separation between scan, validation, lookup, planning, and execution
+| Tool                                            | Purpose                               |
+| ----------------------------------------------- | ------------------------------------- |
+| Python 3.14.2                                   | Core language                         |
+| [uv](https://github.com/astral-sh/uv)           | Dependency and environment management |
+| [ruff](https://github.com/astral-sh/ruff)       | Linting and formatting                |
+| [pyright](https://github.com/microsoft/pyright) | Static type checking                  |
+| [pytest](https://pytest.org)                    | Test framework                        |
 
-## Documentation
+### Common commands
 
-For the detailed project design, workflow, and metadata strategy, see:
+```bash
+# Run all tests
+uv run pytest
 
-- [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md)
+# Run tests with coverage
+uv run pytest --cov=src/jellyfin_media_normalizer --cov-report=term-missing
+
+# Lint and format
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
+
+# Type check
+uv run pyright
+```
