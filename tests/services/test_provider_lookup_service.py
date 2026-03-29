@@ -107,7 +107,7 @@ class TestProviderLookupService:
         result: list[ParsedMediaItem] = service.run(items)
 
         assert result[0].provider_match is None
-        assert "Provider ID not found in provider cache." in result[0].issues
+        assert "Provider ID not found in provider cache or online providers." in result[0].issues
 
     def test_run_skips_unknown_media_type(self) -> None:
         """Unknown media type should not call provider mapping path."""

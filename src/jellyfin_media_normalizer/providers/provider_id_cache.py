@@ -21,6 +21,9 @@ class ProviderIdCacheResolver(LoggingMixin):
     :param cache_file_path: Path to cache JSON file.
     """
 
+    cache_file_path: Path
+    _cache_entries: dict[str, ProviderMatch] | None
+
     def __init__(self, cache_file_path: Path) -> None:
         """Initialize resolver.
 
@@ -28,6 +31,18 @@ class ProviderIdCacheResolver(LoggingMixin):
         """
         self.cache_file_path = cache_file_path
         self._cache_entries: dict[str, ProviderMatch] | None = None
+
+    def bootstrap(self) -> None:
+        """Ensure cache file exists with expected root schema."""
+        self.cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.cache_file_path.exists():
+            return
+
+        payload: dict[str, object] = {
+            "schema_version": 1,
+            "entries": {},
+        }
+        self.cache_file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def resolve(self, item: ParsedMediaItem) -> ProviderMatch | None:
         """Resolve provider ID for one parsed media item.
@@ -121,3 +136,46 @@ class ProviderIdCacheResolver(LoggingMixin):
 
         self._cache_entries = entries
         return entries
+
+    def store_lookup_result(self, lookup_key: str, match: ProviderMatch) -> ProviderMatch:
+        """Persist provider lookup result into cache.
+
+        :param lookup_key: Canonical cache lookup key.
+        :param match: Provider match to persist.
+        :return: Persisted match with canonical lookup key and cache reason.
+        """
+        entries: dict[str, ProviderMatch] = self._load_cache_entries()
+        persisted_match: ProviderMatch = ProviderMatch(
+            provider=match.provider,
+            provider_id=match.provider_id,
+            confidence=match.confidence,
+            reason=f"cache_exact_key:{lookup_key}",
+            lookup_key=lookup_key,
+        )
+
+        entries[lookup_key] = persisted_match
+        self._cache_entries = entries
+        self._write_cache_entries(entries)
+        return persisted_match
+
+    def _write_cache_entries(self, entries: dict[str, ProviderMatch]) -> None:
+        """Write cache entries to disk.
+
+        :param entries: Entries keyed by canonical lookup key.
+        """
+        serialized_entries: dict[str, dict[str, object]] = {
+            key: {
+                "provider": value.provider,
+                "provider_id": value.provider_id,
+                "confidence": value.confidence,
+                "reason": value.reason,
+            }
+            for key, value in entries.items()
+        }
+
+        payload: dict[str, object] = {
+            "schema_version": 1,
+            "entries": serialized_entries,
+        }
+        self.cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

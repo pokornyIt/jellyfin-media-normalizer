@@ -9,6 +9,7 @@ import click
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
 from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
 from jellyfin_media_normalizer.services.parse_service import ParseService
@@ -151,3 +152,13 @@ def validate_path(path_value: Path) -> None:
 
     click.echo(f"Path does not exist: {path_value}")
     raise SystemExit(1)
+
+
+@app.command(name="bootstrap-providers")
+@click.pass_context
+def bootstrap_providers(ctx: click.Context) -> None:
+    """Bootstrap provider cache file in workspace cache directory."""
+    settings: Settings = ctx.obj["settings"]
+    cache_resolver = ProviderIdCacheResolver(settings.cache_path / "provider_ids.json")
+    cache_resolver.bootstrap()
+    click.echo(f"Provider cache bootstrapped: {cache_resolver.cache_file_path}")

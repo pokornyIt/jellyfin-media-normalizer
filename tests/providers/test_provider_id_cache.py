@@ -47,6 +47,22 @@ def _make_parsed_item(
 class TestProviderIdCacheResolver:
     """Test ProviderIdCacheResolver."""
 
+    def test_bootstrap_creates_cache_file(self, tmp_path: Path) -> None:
+        """Resolver bootstrap creates cache file with entries root.
+
+        :param tmp_path: Temporary path fixture.
+        """
+        cache_path: Path = tmp_path / "provider_ids.json"
+        assert not cache_path.exists()
+
+        resolver = ProviderIdCacheResolver(cache_path)
+        resolver.bootstrap()
+
+        assert cache_path.exists()
+        payload: dict[str, object] = json.loads(cache_path.read_text(encoding="utf-8"))
+        assert payload["schema_version"] == 1
+        assert payload["entries"] == {}
+
     def test_resolve_movie_with_year(self, tmp_path: Path) -> None:
         """Resolve movie key with year from cache.
 
@@ -121,6 +137,35 @@ class TestProviderIdCacheResolver:
         )
 
         assert resolver.resolve(item) is None
+
+    def test_store_lookup_result_persists_to_cache(self, tmp_path: Path) -> None:
+        """Stored result must be immediately readable from cache.
+
+        :param tmp_path: Temporary path fixture.
+        """
+        cache_path: Path = tmp_path / "provider_ids.json"
+        resolver = ProviderIdCacheResolver(cache_path)
+
+        lookup_key: str = "movie|avatar|2009"
+        match = ProviderMatch(
+            provider="tmdb",
+            provider_id="19995",
+            confidence=0.9,
+            reason="tmdb_search_movie",
+            lookup_key="",
+        )
+
+        resolver.store_lookup_result(lookup_key, match)
+        item: ParsedMediaItem = _make_parsed_item(
+            media_type="movie",
+            normalized_title="avatar",
+            year=2009,
+        )
+
+        cached_match: ProviderMatch | None = resolver.resolve(item)
+        assert cached_match is not None
+        assert cached_match.provider_id == "19995"
+        assert cached_match.lookup_key == lookup_key
 
     @pytest.mark.parametrize("media_type", ["unknown", "music_video"])
     def test_resolve_returns_none_for_unsupported_media_type(
