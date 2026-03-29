@@ -38,6 +38,7 @@ def _make_settings(
         dry_run=True,
         tmdb_api_key=None,
         tvdb_api_key=None,
+        provider_lookup_progress_interval=100,
     )
 
 

@@ -7,15 +7,21 @@ import re
 from jellyfin_media_normalizer.constants import LANGUAGE_CODES
 from jellyfin_media_normalizer.models.media_type import MediaType
 from jellyfin_media_normalizer.models.parsed_name import ParsedName
+from jellyfin_media_normalizer.parsers.patterns import (
+    CZ_SUB_PATTERN,
+    EN_SUB_PATTERN,
+    LANGUAGE_PATTERN,
+    YEAR_PATTERN,
+)
 
 
 class MovieNameParser:
     """Parse normalized movie filenames."""
 
-    _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
-    _LANGUAGE_PATTERN: re.Pattern[str] = re.compile(r"(?:^| - )(?P<lang>[A-Z]{2})(?:$| )")
-    _CZ_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit(?:le)?\.?\s*CZ\)", re.IGNORECASE)
-    _EN_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit(?:le)?\.?\s*EN\)", re.IGNORECASE)
+    _YEAR_PATTERN: re.Pattern[str] = YEAR_PATTERN
+    _LANGUAGE_PATTERN: re.Pattern[str] = LANGUAGE_PATTERN
+    _CZ_SUB_PATTERN: re.Pattern[str] = CZ_SUB_PATTERN
+    _EN_SUB_PATTERN: re.Pattern[str] = EN_SUB_PATTERN
 
     def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
         """Parse a movie filename.

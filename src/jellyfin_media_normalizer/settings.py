@@ -23,6 +23,7 @@ class Settings:
     :param dry_run: Whether destructive operations are disabled by default.
     :param tmdb_api_key: TMDb API key, if configured.
     :param tvdb_api_key: TVDB API key, if configured.
+    :param provider_lookup_progress_interval: How often to log provider lookup progress.
     """
 
     app_name: str
@@ -37,6 +38,7 @@ class Settings:
     dry_run: bool
     tmdb_api_key: str | None
     tvdb_api_key: str | None
+    provider_lookup_progress_interval: int
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -59,6 +61,9 @@ class Settings:
             dry_run=_parse_bool(os.getenv("JMN_DRY_RUN", "true")),
             tmdb_api_key=_optional_env("JMN_TMDB_API_KEY"),
             tvdb_api_key=_optional_env("JMN_TVDB_API_KEY"),
+            provider_lookup_progress_interval=int(
+                os.getenv("JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL", "100")
+            ),
         )
 
     def ensure_directories(self) -> None:

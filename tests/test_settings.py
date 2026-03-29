@@ -142,7 +142,7 @@ class TestSettingsFromEnv:
         :param expected: Expected attribute value after parsing.
         """
         monkeypatch.setenv(env_var, env_value)
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
         assert getattr(settings, attr) == expected
 
     @pytest.mark.parametrize(
@@ -172,7 +172,7 @@ class TestSettingsFromEnv:
         :param expected: Expected parsed boolean result.
         """
         monkeypatch.setenv("JMN_DRY_RUN", dry_run_value)
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
         assert settings.dry_run is expected
 
     def test_workspace_derived_paths_use_custom_workspace(
@@ -186,7 +186,7 @@ class TestSettingsFromEnv:
         for var in ("JMN_CACHE_PATH", "JMN_REPORTS_PATH", "JMN_MANIFESTS_PATH", "JMN_LOGS_PATH"):
             monkeypatch.delenv(var, raising=False)
 
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
 
         assert settings.cache_path == Path("/data/ws/cache")
         assert settings.reports_path == Path("/data/ws/reports")
@@ -203,7 +203,7 @@ class TestSettingsFromEnv:
         monkeypatch.setenv("JMN_WORKSPACE_PATH", "/data/ws")
         monkeypatch.setenv("JMN_CACHE_PATH", "/tmp/cache")
 
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
 
         assert settings.cache_path == Path("/tmp/cache")
         assert settings.reports_path == Path("/data/ws/reports")
@@ -228,7 +228,7 @@ class TestSettingsFromEnv:
         :param attr: Settings attribute to inspect.
         """
         monkeypatch.setenv(api_key_var, "secret-key-123")
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
         assert getattr(settings, attr) == "secret-key-123"
 
     @pytest.mark.parametrize(
@@ -251,7 +251,7 @@ class TestSettingsFromEnv:
         :param attr: Settings attribute to inspect.
         """
         monkeypatch.delenv(api_key_var, raising=False)
-        settings = Settings.from_env()
+        settings: Settings = Settings.from_env()
         assert getattr(settings, attr) is None
 
         monkeypatch.setenv(api_key_var, "  ")
@@ -267,7 +267,7 @@ class TestSettingsEnsureDirectories:
 
         :param tmp_path: pytest built-in temporary directory fixture.
         """
-        ws = tmp_path / "workspace"
+        ws: Path = tmp_path / "workspace"
         settings = Settings(
             app_name="test",
             library_path=tmp_path / "library",
@@ -281,6 +281,7 @@ class TestSettingsEnsureDirectories:
             dry_run=True,
             tmdb_api_key=None,
             tvdb_api_key=None,
+            provider_lookup_progress_interval=100,
         )
 
         settings.ensure_directories()
@@ -296,7 +297,7 @@ class TestSettingsEnsureDirectories:
 
         :param tmp_path: pytest built-in temporary directory fixture.
         """
-        ws = tmp_path / "workspace"
+        ws: Path = tmp_path / "workspace"
         ws.mkdir(parents=True)
 
         settings = Settings(
@@ -312,6 +313,7 @@ class TestSettingsEnsureDirectories:
             dry_run=True,
             tmdb_api_key=None,
             tvdb_api_key=None,
+            provider_lookup_progress_interval=100,
         )
 
         settings.ensure_directories()
@@ -329,7 +331,7 @@ class TestSettingsEnsureDirectories:
         :param tmp_path: pytest built-in temporary directory fixture.
         :param attr: Settings attribute name of the directory to verify.
         """
-        ws = tmp_path / "workspace"
+        ws: Path = tmp_path / "workspace"
         settings = Settings(
             app_name="test",
             library_path=tmp_path / "library",
@@ -343,6 +345,7 @@ class TestSettingsEnsureDirectories:
             dry_run=True,
             tmdb_api_key=None,
             tvdb_api_key=None,
+            provider_lookup_progress_interval=100,
         )
 
         settings.ensure_directories()

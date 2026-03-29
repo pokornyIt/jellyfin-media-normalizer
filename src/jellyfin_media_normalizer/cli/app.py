@@ -9,8 +9,10 @@ import click
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
 from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
+from jellyfin_media_normalizer.reporters.unresolved_reporter import UnresolvedReporter
 from jellyfin_media_normalizer.services.parse_service import ParseService
 from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
@@ -91,6 +93,7 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     scan_service: ScanService = ScanService(settings=settings)
     parse_service: ParseService = ParseService(settings=settings)
     reporter: ReviewReporter = ReviewReporter()
+    unresolved_reporter: UnresolvedReporter = UnresolvedReporter()
 
     media_items: list[MediaItem] = scan_service.run()
     parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
@@ -106,9 +109,45 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
         f"passed={passed_count}, review_needed={review_count}, failed={failed_count}"
     )
 
-    report_path: Path = output_path or (settings.reports_path / "review-report.json")
+    resolved_count: int = sum(1 for item in parsed_items if item.provider_match is not None)
+    cache_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and item.provider_match.reason.startswith("cache_exact_key:")
+    )
+    online_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and (
+            item.provider_match.reason.startswith("tmdb_search_")
+            or item.provider_match.reason.startswith("tvdb_search_")
+        )
+    )
+    embedded_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and item.provider_match.reason.startswith("source_embedded_id:")
+    )
+    unresolved_count: int = sum(
+        1 for item in parsed_items if item.provider_match is None and item.media_type != "unknown"
+    )
+    click.echo(
+        "Provider lookup summary: "
+        f"resolved={resolved_count} (cache={cache_count}, online={online_count}, "
+        f"embedded={embedded_count}), "
+        f"unresolved={unresolved_count}"
+    )
+
+    report_path: Path = output_path or (settings.reports_path / "parse-review-report.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"Review report written to: {written_path}")
+
+    unresolved_path: Path = settings.reports_path / "unresolved-provider-report.json"
+    written_unresolved_path: Path = unresolved_reporter.write(parsed_items, unresolved_path)
+    click.echo(f"Unresolved provider report written to: {written_unresolved_path}")
 
 
 @app.command(name="report-scan")
@@ -133,7 +172,7 @@ def report_scan(ctx: click.Context, output_path: Path | None) -> None:
 
     media_items: list[MediaItem] = scan_service.run()
     parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
-    report_path: Path = output_path or (settings.reports_path / "scan-report.json")
+    report_path: Path = output_path or (settings.reports_path / "report-scan-results.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"JSON report written to: {written_path}")
 
@@ -151,3 +190,13 @@ def validate_path(path_value: Path) -> None:
 
     click.echo(f"Path does not exist: {path_value}")
     raise SystemExit(1)
+
+
+@app.command(name="bootstrap-providers")
+@click.pass_context
+def bootstrap_providers(ctx: click.Context) -> None:
+    """Bootstrap provider cache file in workspace cache directory."""
+    settings: Settings = ctx.obj["settings"]
+    cache_resolver = ProviderIdCacheResolver(settings.cache_path / "provider_ids.json")
+    cache_resolver.bootstrap()
+    click.echo(f"Provider cache bootstrapped: {cache_resolver.cache_file_path}")

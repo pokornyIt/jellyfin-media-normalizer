@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from jellyfin_media_normalizer.models.media_type import MediaType
+from jellyfin_media_normalizer.parsers.patterns import YEAR_PATTERN
 
 
 class Classifier:
@@ -20,7 +21,7 @@ class Classifier:
     _TV_HYPHEN_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
         r"(?:^|[\s-])\d{1,2}[-_x]\d{1,2}(?=\s|-|$)", re.IGNORECASE
     )
-    _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
+    _YEAR_PATTERN: re.Pattern[str] = YEAR_PATTERN
 
     def classify(self, name: str) -> MediaType:
         """Classify a normalized filename.
