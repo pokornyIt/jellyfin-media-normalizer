@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from jellyfin_media_normalizer.constants import LANGUAGE_CODES
 from jellyfin_media_normalizer.models.media_type import MediaType
 from jellyfin_media_normalizer.models.parsed_name import ParsedName
 
@@ -13,7 +14,8 @@ class MovieNameParser:
 
     _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
     _LANGUAGE_PATTERN: re.Pattern[str] = re.compile(r"(?:^| - )(?P<lang>[A-Z]{2})(?:$| )")
-    _CZ_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit\. CZ\)", re.IGNORECASE)
+    _CZ_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit(?:le)?\.?\s*CZ\)", re.IGNORECASE)
+    _EN_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit(?:le)?\.?\s*EN\)", re.IGNORECASE)
 
     def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
         """Parse a movie filename.
@@ -27,13 +29,14 @@ class MovieNameParser:
 
         language_code: str | None = self._detect_language(normalized_name)
         has_czech_subtitles: bool = self._CZ_SUB_PATTERN.search(normalized_name) is not None
+        has_english_subtitles: bool = self._EN_SUB_PATTERN.search(normalized_name) is not None
 
         title: str = normalized_name
         if year_match is not None:
             # Find start of the year (handle parentheses like (2016))
-            year_start = year_match.start()
+            year_start: int = year_match.start()
             # Backtrack to find opening parenthesis if present
-            paren_start = normalized_name.rfind("(", 0, year_start)
+            paren_start: int = normalized_name.rfind("(", 0, year_start)
             if paren_start != -1:
                 title = normalized_name[:paren_start].strip(" -")
             else:
@@ -55,6 +58,7 @@ class MovieNameParser:
             episode=None,
             language_code=language_code,
             has_czech_subtitles=has_czech_subtitles,
+            has_english_subtitles=has_english_subtitles,
             confidence=confidence,
         )
 
@@ -67,4 +71,7 @@ class MovieNameParser:
         match: re.Match[str] | None = self._LANGUAGE_PATTERN.search(normalized_name)
         if match is None:
             return None
-        return match.group("lang")
+        lang: str = match.group("lang").upper()
+        if lang not in LANGUAGE_CODES:
+            return None
+        return lang

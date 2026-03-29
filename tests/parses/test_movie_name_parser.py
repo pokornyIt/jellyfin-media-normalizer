@@ -118,6 +118,8 @@ class TestMovieNameParser:
         [
             ("Title 2020 - EN", "EN"),
             ("Title 2020 - CZ (tit. CZ)", "CZ"),
+            ("Title (2020) - CZ", "CZ"),
+            ("Title (2020) - CZ (tit. CZ)", "CZ"),
             ("Title 2020", None),
             ("Title - en", None),
         ],

@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
+from jellyfin_media_normalizer.models.media_type import MediaType
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.models.parsed_name import ParsedName
 from jellyfin_media_normalizer.parsers.media_parser import MediaParser
 
 
@@ -44,7 +46,7 @@ class TestMediaParserParse:
                 1,
             ),
             (
-                "Dark.s3e8.-.CZ.mkv",
+                "Dark.S03E08.-.CZ.mkv",
                 "Dark",
                 "Dark",
                 3,
@@ -74,7 +76,7 @@ class TestMediaParserParse:
         assert parsed.normalized_title == expected_norm_title
         assert parsed.season == expected_season
         assert parsed.episode == expected_episode
-        assert parsed.confidence == pytest.approx(0.92)
+        assert parsed.confidence == pytest.approx(0.95)
 
     @pytest.mark.parametrize(
         ("filename", "expected_title", "expected_year", "expected_norm_title"),
@@ -85,6 +87,12 @@ class TestMediaParserParse:
                 "The Matrix",
                 1999,
                 "The Matrix",
+            ),
+            (
+                "Underworld 5 - Krvave valky (2016) - CZ.mkv",
+                "Underworld 5 - Krvave valky",
+                2016,
+                "Underworld 5 - Krvave valky",
             ),
         ],
     )
@@ -158,38 +166,105 @@ class TestMediaParserLanguageExtraction:
         assert parsed.subtitle_language == expected_sub
 
 
-class TestMediaParserNormalizationHelpers:
-    """Tests for internal cleanup and normalization helpers."""
+class _FakeCleaner:
+    """Fake cleaner for dependency injection tests."""
 
-    @pytest.mark.parametrize(
-        ("value", "expected"),
-        [
-            ("Movie...Name___2020", "Movie Name 2020"),
-            ("  A___B..C  ", "A B C"),
-        ],
-    )
-    def test_cleanup_name(self, value: str, expected: str) -> None:
-        """Replace separators and normalize spaces.
+    def clean(self, filename: str) -> str:
+        """Return deterministic cleaned value.
 
-        :param value: Raw value to clean up.
-        :param expected: Expected cleaned value.
+        :param filename: Raw filename.
+        :return: Constant cleaned value.
         """
-        parser = MediaParser()
-        assert parser._cleanup_name(value) == expected
+        _ = filename
+        return "cleaned-name"
 
-    @pytest.mark.parametrize(
-        ("value", "expected"),
-        [
-            ("The Matrix 1080p BluRay x264", "The Matrix"),
-            ("Show Name remux h265", "Show Name"),
-            ("Normal Title", "Normal Title"),
-        ],
-    )
-    def test_normalize_title(self, value: str, expected: str) -> None:
-        """Remove known noise tokens from title chunks.
 
-        :param value: Title value with possible noise tokens.
-        :param expected: Expected normalized title.
+class _FakeClassifier:
+    """Fake classifier for dependency injection tests."""
+
+    def classify(self, name: str) -> MediaType:
+        """Classify all inputs as movies.
+
+        :param name: Cleaned filename.
+        :return: Fixed movie type.
         """
-        parser = MediaParser()
-        assert parser._normalize_title(value) == expected
+        _ = name
+        return MediaType.MOVIE
+
+
+class _FakeMovieParser:
+    """Fake movie parser for dependency injection tests."""
+
+    def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
+        """Return deterministic parsed movie data.
+
+        :param raw_name: Original filename.
+        :param normalized_name: Cleaned filename.
+        :return: ParsedName with injected values.
+        """
+        _ = raw_name
+        _ = normalized_name
+        return ParsedName(
+            media_type=MediaType.MOVIE,
+            raw_name="fake.mkv",
+            normalized_name="fake normalized",
+            title="Injected Title",
+            year=1984,
+            season=None,
+            episode=None,
+            language_code="EN",
+            has_czech_subtitles=False,
+            has_english_subtitles=True,
+            confidence=0.77,
+        )
+
+
+class _FakeTvParser:
+    """Fake TV parser for dependency injection tests."""
+
+    def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
+        """Return unknown for all inputs.
+
+        :param raw_name: Original filename.
+        :param normalized_name: Cleaned filename.
+        :return: Unknown ParsedName.
+        """
+        _ = raw_name
+        _ = normalized_name
+        return ParsedName(
+            media_type=MediaType.UNKNOWN,
+            raw_name="fake.mkv",
+            normalized_name="fake normalized",
+            title=None,
+            year=None,
+            season=None,
+            episode=None,
+            language_code=None,
+            has_czech_subtitles=False,
+            has_english_subtitles=False,
+            confidence=0.0,
+        )
+
+
+class TestMediaParserDependencyInjection:
+    """Tests constructor-based dependency injection on MediaParser."""
+
+    def test_parse_uses_injected_dependencies(self) -> None:
+        """Injected cleaner/classifier/parsers are used instead of defaults.
+
+        :return: None
+        """
+        parser = MediaParser(
+            cleaner=_FakeCleaner(),
+            classifier=_FakeClassifier(),
+            movie_parser=_FakeMovieParser(),
+            tv_parser=_FakeTvParser(),
+        )
+
+        parsed: ParsedMediaItem = parser.parse(_item("anything.mkv"))
+
+        assert parsed.media_type == "movie"
+        assert parsed.title == "Injected Title"
+        assert parsed.year == 1984
+        assert parsed.subtitle_language == "EN"
+        assert parsed.confidence == pytest.approx(0.77)

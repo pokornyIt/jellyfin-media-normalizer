@@ -59,6 +59,25 @@ def _make_media_item(
     )
 
 
+class _FakeMediaParser:
+    """Fake parser used to test ParseService dependency injection."""
+
+    def parse(self, item: MediaItem) -> ParsedMediaItem:
+        """Return deterministic parsed output.
+
+        :param item: Input media item.
+        :return: Parsed result for the item.
+        """
+        return ParsedMediaItem(
+            source=item,
+            media_type="movie",
+            title="Injected",
+            normalized_title="Injected",
+            year=2000,
+            confidence=0.5,
+        )
+
+
 class TestParseServiceInitialization:
     """Tests for :class:`ParseService` initialization."""
 
@@ -91,6 +110,17 @@ class TestParseServiceInitialization:
         service = ParseService(settings=settings)
 
         assert isinstance(service.settings, Settings)
+
+    def test_init_uses_injected_parser(self) -> None:
+        """Initialization accepts injected parser implementation.
+
+        :return: None
+        """
+        settings: Settings = _make_settings()
+        parser = _FakeMediaParser()
+        service = ParseService(settings=settings, parser=parser)
+
+        assert service.parser is parser
 
 
 class TestParseServiceRun:
@@ -217,6 +247,22 @@ class TestParseServiceRun:
         media_types: set[str] = {item.media_type for item in result}
         assert "movie" in media_types
         assert "tv_episode" in media_types
+
+    def test_run_uses_injected_parser(self) -> None:
+        """Run delegates parsing to injected parser.
+
+        :return: None
+        """
+        settings: Settings = _make_settings()
+        parser = _FakeMediaParser()
+        service = ParseService(settings=settings, parser=parser)
+        items: list[MediaItem] = [_make_media_item(path="/library/Any.Title.mkv")]
+
+        result: list[ParsedMediaItem] = service.run(media_items=items)
+
+        assert len(result) == 1
+        assert result[0].title == "Injected"
+        assert result[0].year == 2000
 
     def test_run_preserves_confidence_scores(self) -> None:
         """Run preserves confidence scores from parser.

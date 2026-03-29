@@ -2,24 +2,90 @@
 
 from __future__ import annotations
 
-import re
+from typing import Protocol
 
-from jellyfin_media_normalizer.constants import KNOWN_NOISE_TOKENS, LANGUAGE_CODES
 from jellyfin_media_normalizer.models.media_item import MediaItem
+from jellyfin_media_normalizer.models.media_type import MediaType
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.models.parsed_name import ParsedName
+from jellyfin_media_normalizer.parsers.classifier import Classifier
+from jellyfin_media_normalizer.parsers.filename_cleaner import FilenameCleaner
+from jellyfin_media_normalizer.parsers.movie_name_parser import MovieNameParser
+from jellyfin_media_normalizer.parsers.tv_episode_parser import TvEpisodeParser
 from jellyfin_media_normalizer.utils.logging import LoggingMixin
 
-YEAR_RE: re.Pattern[str] = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)")
-EPISODE_RE: re.Pattern[str] = re.compile(r"(?i)\bS(?P<season>\d{1,2})E(?P<episode>\d{1,3})\b")
-LANGUAGE_RE: re.Pattern[str] = re.compile(
-    r"(?i)(?:^|\s-\s)(?P<lang>[A-Z]{2})(?:\s*\((?:tit|title)[\s.]*(?P<sub>[A-Z]{2})\))?$"
-)
-SEPARATORS_RE: re.Pattern[str] = re.compile(r"[._]+")
-MULTISPACE_RE: re.Pattern[str] = re.compile(r"\s+")
+
+class FilenameCleanerProtocol(Protocol):
+    """Protocol for filename cleaning dependencies."""
+
+    def clean(self, filename: str) -> str:
+        """Clean a raw filename.
+
+        :param filename: Raw filename.
+        :return: Cleaned filename.
+        """
+        ...
+
+
+class ClassifierProtocol(Protocol):
+    """Protocol for media type classifier dependencies."""
+
+    def classify(self, name: str) -> MediaType:
+        """Classify a cleaned filename.
+
+        :param name: Cleaned filename.
+        :return: Classified media type.
+        """
+        ...
+
+
+class MovieNameParserProtocol(Protocol):
+    """Protocol for movie parser dependencies."""
+
+    def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
+        """Parse movie naming information.
+
+        :param raw_name: Raw input filename.
+        :param normalized_name: Cleaned filename.
+        :return: Parsed movie information.
+        """
+        ...
+
+
+class TvEpisodeParserProtocol(Protocol):
+    """Protocol for TV episode parser dependencies."""
+
+    def parse(self, raw_name: str, normalized_name: str) -> ParsedName:
+        """Parse TV naming information.
+
+        :param raw_name: Raw input filename.
+        :param normalized_name: Cleaned filename.
+        :return: Parsed episode information.
+        """
+        ...
 
 
 class MediaParser(LoggingMixin):
     """Parse discovered media items into a structured representation."""
+
+    def __init__(
+        self,
+        cleaner: FilenameCleanerProtocol | None = None,
+        classifier: ClassifierProtocol | None = None,
+        movie_parser: MovieNameParserProtocol | None = None,
+        tv_parser: TvEpisodeParserProtocol | None = None,
+    ) -> None:
+        """Initialize the parser and allow dependency injection.
+
+        :param cleaner: Optional filename cleaner implementation.
+        :param classifier: Optional media type classifier implementation.
+        :param movie_parser: Optional movie filename parser implementation.
+        :param tv_parser: Optional TV episode parser implementation.
+        """
+        self._cleaner: FilenameCleanerProtocol = cleaner or FilenameCleaner()
+        self._classifier: ClassifierProtocol = classifier or Classifier()
+        self._movie_parser: MovieNameParserProtocol = movie_parser or MovieNameParser()
+        self._tv_parser: TvEpisodeParserProtocol = tv_parser or TvEpisodeParser()
 
     def parse(self, item: MediaItem) -> ParsedMediaItem:
         """Parse a media item from its filename and path context.
@@ -27,136 +93,50 @@ class MediaParser(LoggingMixin):
         :param item: The media item to parse.
         :return: A ParsedMediaItem with extracted metadata and classification.
         """
-        raw_name: str = item.path.stem
-        cleaned_name: str = self._cleanup_name(raw_name)
+        raw_name: str = item.path.name
+        normalized_name: str = self._cleaner.clean(raw_name)
+        media_type: MediaType = self._classifier.classify(normalized_name)
 
-        episode_match: re.Match[str] | None = EPISODE_RE.search(cleaned_name)
-        if episode_match is not None:
-            return self._parse_tv_episode(item=item, cleaned_name=cleaned_name, match=episode_match)
+        if media_type == MediaType.TV_EPISODE:
+            parsed: ParsedName = self._tv_parser.parse(raw_name, normalized_name)
+        elif media_type == MediaType.MOVIE:
+            parsed = self._movie_parser.parse(raw_name, normalized_name)
+        else:
+            return ParsedMediaItem(
+                source=item,
+                media_type=MediaType.UNKNOWN,
+                title=normalized_name,
+                normalized_title=normalized_name,
+                confidence=0.2,
+                issues=["Unable to detect movie year or TV episode pattern."],
+            )
 
-        year_match: re.Match[str] | None = YEAR_RE.search(cleaned_name)
-        if year_match is not None:
-            return self._parse_movie(item=item, cleaned_name=cleaned_name, match=year_match)
+        return self._to_parsed_media_item(item, parsed)
 
-        return ParsedMediaItem(
-            source=item,
-            media_type="unknown",
-            title=cleaned_name,
-            normalized_title=cleaned_name,
-            confidence=0.2,
-            issues=["Unable to detect movie year or TV episode pattern."],
-        )
+    def _to_parsed_media_item(self, item: MediaItem, parsed: ParsedName) -> ParsedMediaItem:
+        """Convert a ParsedName to a ParsedMediaItem with its source item attached.
 
-    def _parse_movie(
-        self, item: MediaItem, cleaned_name: str, match: re.Match[str]
-    ) -> ParsedMediaItem:
-        """Parse a movie item based on a year pattern match.
-
-        :param item: The media item to parse.
-        :param cleaned_name: The cleaned filename to extract metadata from.
-        :param match: The regex match object containing the year.
-        :return: A ParsedMediaItem with extracted movie metadata.
+        :param item: The original scanned MediaItem.
+        :param parsed: The parsing result from a specialized parser.
+        :return: A ParsedMediaItem combining the source and parsed data.
         """
-        language: str | None
-        subtitle_language: str | None
-        name_without_language: str
-        language, subtitle_language, name_without_language = self._extract_language(cleaned_name)
-        year: int = int(match.group(1))
-        title_part: str = name_without_language[: match.start()].strip(" -")
-        normalized_title: str = self._normalize_title(title_part)
         issues: list[str] = []
-        confidence: float = 0.9
-        if not normalized_title:
-            normalized_title = cleaned_name
-            issues.append("Movie title could not be normalized cleanly.")
-            confidence = 0.5
+        if not parsed.title:
+            issues.append("Title could not be extracted from the filename.")
+        subtitle_language: str | None = "CZ" if parsed.has_czech_subtitles else None
+        if parsed.has_english_subtitles and not parsed.has_czech_subtitles:
+            subtitle_language = "EN"
+        title: str = parsed.title or parsed.normalized_name
         return ParsedMediaItem(
             source=item,
-            media_type="movie",
-            title=title_part or cleaned_name,
-            normalized_title=normalized_title,
-            year=year,
-            language=language,
+            media_type=parsed.media_type,
+            title=title,
+            normalized_title=title,
+            year=parsed.year,
+            season=parsed.season,
+            episode=parsed.episode,
+            language=parsed.language_code,
             subtitle_language=subtitle_language,
-            confidence=confidence,
+            confidence=parsed.confidence,
             issues=issues,
         )
-
-    def _parse_tv_episode(
-        self, item: MediaItem, cleaned_name: str, match: re.Match[str]
-    ) -> ParsedMediaItem:
-        """Parse a TV episode item based on an SxxExx pattern match.
-
-        :param item: The media item to parse.
-        :param cleaned_name: The cleaned filename to extract metadata from.
-        :param match: The regex match object containing the season and episode.
-        :return: A ParsedMediaItem with extracted TV episode metadata.
-        """
-        language: str | None
-        subtitle_language: str | None
-        name_without_language: str
-        language, subtitle_language, name_without_language = self._extract_language(cleaned_name)
-        title_part: str = name_without_language[: match.start()].strip(" -")
-        normalized_title: str = self._normalize_title(title_part)
-        season: int = int(match.group("season"))
-        episode: int = int(match.group("episode"))
-        issues: list[str] = []
-        confidence: float = 0.92
-        if not normalized_title:
-            normalized_title = cleaned_name
-            issues.append("Episode title could not be normalized cleanly.")
-            confidence = 0.55
-        return ParsedMediaItem(
-            source=item,
-            media_type="tv_episode",
-            title=title_part or cleaned_name,
-            normalized_title=normalized_title,
-            season=season,
-            episode=episode,
-            language=language,
-            subtitle_language=subtitle_language,
-            confidence=confidence,
-            issues=issues,
-        )
-
-    def _cleanup_name(self, value: str) -> str:
-        """Clean up the raw filename by replacing separators and normalizing whitespace.
-
-        :param value: The raw filename to clean up.
-        :return: The cleaned filename.
-        """
-        normalized: str = SEPARATORS_RE.sub(" ", value)
-        normalized = MULTISPACE_RE.sub(" ", normalized).strip()
-        return normalized
-
-    def _extract_language(self, value: str) -> tuple[str | None, str | None, str]:
-        """Extract language and subtitle information from the filename if present.
-
-        :param value: The cleaned filename to extract language info from.
-        :return: A tuple of (language, subtitle_language, name_without_language).
-        """
-        match: re.Match[str] | None = LANGUAGE_RE.search(value)
-        if match is None:
-            return None, None, value
-        language: str | None = match.group("lang").upper()
-        subtitle_language: str | None = match.group("sub")
-        if language not in LANGUAGE_CODES:
-            return None, None, value
-        if subtitle_language is not None:
-            subtitle_language = subtitle_language.upper()
-        stripped: str = value[: match.start()].strip()
-        return language, subtitle_language, stripped
-
-    def _normalize_title(self, value: str) -> str:
-        """Normalize the title by removing known noise tokens and extra whitespace.
-
-        :param value: The title part of the filename to normalize.
-        :return: The normalized title.
-        """
-        tokens: list[str] = []
-        for token in value.split():
-            if token.lower() in KNOWN_NOISE_TOKENS:
-                continue
-            tokens.append(token)
-        joined: str = " ".join(tokens).strip(" -")
-        return MULTISPACE_RE.sub(" ", joined).strip()

@@ -61,6 +61,7 @@ def _make_parsed_name(
         episode=episode,
         language_code=language_code,
         has_czech_subtitles=False,
+        has_english_subtitles=False,
         confidence=confidence,
     )
 

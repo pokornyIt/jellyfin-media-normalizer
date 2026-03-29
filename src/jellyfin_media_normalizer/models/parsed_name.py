@@ -20,6 +20,7 @@ class ParsedName:
     :param episode: Parsed episode number for TV episodes.
     :param language_code: Parsed audio language code if available.
     :param has_czech_subtitles: Whether Czech subtitles were detected.
+    :param has_english_subtitles: Whether English subtitles were detected.
     :param confidence: Parser confidence score in range 0.0 to 1.0.
     """
 
@@ -32,4 +33,5 @@ class ParsedName:
     episode: int | None
     language_code: str | None
     has_czech_subtitles: bool
+    has_english_subtitles: bool
     confidence: float

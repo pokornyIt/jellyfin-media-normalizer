@@ -18,6 +18,7 @@ def _make_parsed_name(
     episode: int | None = None,
     language_code: str | None = "EN",
     has_czech_subtitles: bool = False,
+    has_english_subtitles: bool = False,
     confidence: float = 0.95,
 ) -> ParsedName:
     """Build a :class:`ParsedName` with sensible defaults.
@@ -44,6 +45,7 @@ def _make_parsed_name(
         episode=episode,
         language_code=language_code,
         has_czech_subtitles=has_czech_subtitles,
+        has_english_subtitles=has_english_subtitles,
         confidence=confidence,
     )
 
@@ -156,6 +158,7 @@ class TestParsedNameAllNoneOptionals:
             episode=None,
             language_code=None,
             has_czech_subtitles=False,
+            has_english_subtitles=False,
             confidence=0.0,
         )
         assert pn.title is None
