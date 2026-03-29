@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from jellyfin_media_normalizer.constants import PROVIDER_TMDB, PROVIDER_TVDB
 from jellyfin_media_normalizer.models.provider_match import ProviderMatch
 from jellyfin_media_normalizer.utils.logging import LoggingMixin
 
@@ -83,7 +84,7 @@ class TmdbClient(LoggingMixin):
             extra={"extra": {"title": title, "tmdb_id": tmdb_id}},
         )
         return ProviderMatch(
-            provider="tmdb",
+            provider=PROVIDER_TMDB,
             provider_id=str(tmdb_id),
             confidence=0.9,
             reason="tmdb_search_movie",
@@ -135,7 +136,7 @@ class TmdbClient(LoggingMixin):
             extra={"extra": {"title": title, "tmdb_id": tmdb_id}},
         )
         return ProviderMatch(
-            provider="tmdb",
+            provider=PROVIDER_TMDB,
             provider_id=str(tmdb_id),
             confidence=0.88,
             reason="tmdb_search_tv",
@@ -221,7 +222,7 @@ class TvdbClient(LoggingMixin):
             extra={"extra": {"title": title, "tvdb_id": series_id}},
         )
         return ProviderMatch(
-            provider="tvdb",
+            provider=PROVIDER_TVDB,
             provider_id=str(series_id),
             confidence=0.82,
             reason="tvdb_search_series",

@@ -43,3 +43,7 @@ KNOWN_NOISE_TOKENS: tuple[str, ...] = (
 )
 
 LANGUAGE_CODES: tuple[str, ...] = ("CZ", "EN", "DE", "SK", "FR", "IT", "ES")
+
+PROVIDER_IMDB: str = "imdb"
+PROVIDER_TMDB: str = "tmdb"
+PROVIDER_TVDB: str = "tvdb"

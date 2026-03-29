@@ -116,13 +116,28 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
         if item.provider_match is not None
         and item.provider_match.reason.startswith("cache_exact_key:")
     )
-    online_count: int = resolved_count - cache_count
+    online_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and (
+            item.provider_match.reason.startswith("tmdb_search_")
+            or item.provider_match.reason.startswith("tvdb_search_")
+        )
+    )
+    embedded_count: int = sum(
+        1
+        for item in parsed_items
+        if item.provider_match is not None
+        and item.provider_match.reason.startswith("source_embedded_id:")
+    )
     unresolved_count: int = sum(
         1 for item in parsed_items if item.provider_match is None and item.media_type != "unknown"
     )
     click.echo(
         "Provider lookup summary: "
-        f"resolved={resolved_count} (cache={cache_count}, online={online_count}), "
+        f"resolved={resolved_count} (cache={cache_count}, online={online_count}, "
+        f"embedded={embedded_count}), "
         f"unresolved={unresolved_count}"
     )
 

@@ -67,6 +67,7 @@ class _FakeResolver:
         :param match: Match returned for non-unknown media.
         """
         self.match: ProviderMatch | None = match
+        self.call_count: int = 0
 
     def resolve(self, item: ParsedMediaItem) -> ProviderMatch | None:
         """Resolve deterministic test output.
@@ -74,6 +75,7 @@ class _FakeResolver:
         :param item: Parsed item.
         :return: Fixed match.
         """
+        self.call_count += 1
         return self.match
 
 
@@ -120,3 +122,43 @@ class TestProviderLookupService:
 
         assert result[0].provider_match is None
         assert "Provider lookup skipped for unknown media type." in result[0].issues
+
+    def test_run_uses_embedded_imdb_id_and_skips_resolver(self) -> None:
+        """Embedded IMDb ID should be used directly and resolver must be skipped."""
+        settings: Settings = _make_settings()
+        resolver = _FakeResolver(None)
+        service = ProviderLookupService(settings=settings, resolver=resolver)
+        item: ParsedMediaItem = _make_item("movie", "avatar", year=2009)
+        item.source = MediaItem(
+            path=Path("/library/Avatar (2009) [imdbid-tt0499549].mkv"),
+            relative_path=Path("Avatar (2009) [imdbid-tt0499549].mkv"),
+            extension=".mkv",
+        )
+
+        result: list[ParsedMediaItem] = service.run([item])
+
+        assert result[0].provider_match is not None
+        assert result[0].provider_match.provider == "imdb"
+        assert result[0].provider_match.provider_id == "tt0499549"
+        assert result[0].provider_match.reason == "source_embedded_id:imdb"
+        assert resolver.call_count == 0
+
+    def test_run_uses_embedded_tmdb_id_and_skips_resolver(self) -> None:
+        """Embedded TMDb ID should be used directly and resolver must be skipped."""
+        settings: Settings = _make_settings()
+        resolver = _FakeResolver(None)
+        service = ProviderLookupService(settings=settings, resolver=resolver)
+        item: ParsedMediaItem = _make_item("movie", "avatar", year=2009)
+        item.source = MediaItem(
+            path=Path("/library/Avatar (2009) [tmdbid-19995].mkv"),
+            relative_path=Path("Avatar (2009) [tmdbid-19995].mkv"),
+            extension=".mkv",
+        )
+
+        result: list[ParsedMediaItem] = service.run([item])
+
+        assert result[0].provider_match is not None
+        assert result[0].provider_match.provider == "tmdb"
+        assert result[0].provider_match.provider_id == "19995"
+        assert result[0].provider_match.reason == "source_embedded_id:tmdb"
+        assert resolver.call_count == 0

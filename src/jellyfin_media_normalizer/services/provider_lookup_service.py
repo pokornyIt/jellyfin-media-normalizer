@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.models.provider_match import ProviderMatch
+from jellyfin_media_normalizer.parsers.provider_id_extractor import extract_provider_id_from_source
 from jellyfin_media_normalizer.providers.online_provider_resolver import OnlineProviderResolver
 from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 from jellyfin_media_normalizer.providers.provider_resolver_chain import ProviderResolverChain
@@ -46,11 +47,41 @@ class ProviderLookupService(LoggingMixin):
         resolved_count: int = 0
         cache_count: int = 0
         online_count: int = 0
+        embedded_count: int = 0
 
         for processed, item in enumerate(media_items, start=1):
             if item.media_type == "unknown":
                 _append_issue(item, "Provider lookup skipped for unknown media type.")
             else:
+                embedded_match: ProviderMatch | None = extract_provider_id_from_source(item)
+                if embedded_match is not None:
+                    item.provider_match = embedded_match
+                    resolved_count += 1
+                    embedded_count += 1
+                    self.log.debug(
+                        "Provider ID extracted from source name, skipping provider lookup",
+                        extra={
+                            "extra": {
+                                "provider": embedded_match.provider,
+                                "provider_id": embedded_match.provider_id,
+                                "source_path": str(item.source.relative_path),
+                            }
+                        },
+                    )
+                    if processed % self.progress_interval == 0:
+                        self.log.info(
+                            "Provider lookup progress",
+                            extra={
+                                "extra": {
+                                    "processed": processed,
+                                    "total": total,
+                                    "resolved": resolved_count,
+                                    "unresolved": processed - resolved_count,
+                                }
+                            },
+                        )
+                    continue
+
                 match: ProviderMatch | None = self.resolver.resolve(item)
                 if match is None:
                     _append_issue(
@@ -61,7 +92,9 @@ class ProviderLookupService(LoggingMixin):
                     resolved_count += 1
                     if match.reason.startswith("cache_exact_key:"):
                         cache_count += 1
-                    else:
+                    elif match.reason.startswith("tmdb_search_") or match.reason.startswith(
+                        "tvdb_search_"
+                    ):
                         online_count += 1
 
             if processed % self.progress_interval == 0:
@@ -86,6 +119,7 @@ class ProviderLookupService(LoggingMixin):
                     "resolved_count": resolved_count,
                     "cache_count": cache_count,
                     "online_count": online_count,
+                    "embedded_count": embedded_count,
                     "unresolved_count": unresolved_count,
                 }
             },
