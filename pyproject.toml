@@ -42,7 +42,7 @@ Repository = "https://github.com/pokornyIt/jellyfin-media-normalizer"
 Issues = "https://github.com/pokornyIt/jellyfin-media-normalizer/issues"
 
 [project.scripts]
-jellyfin-media-normalizer = "jellyfin_media_normalizer.cli:app"
+jellyfin-media-normalizer = "jellyfin_media_normalizer.main:main"
 
 [build-system]
 requires = ["hatchling>=1.27.0"]

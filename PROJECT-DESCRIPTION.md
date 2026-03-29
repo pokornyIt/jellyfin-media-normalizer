@@ -267,3 +267,59 @@ After completion, the media library should have:
 - controlled handling of uncertain matches
 
 The result should be a media library that is both easy to browse directly on disk and much more reliable when scanned by Jellyfin.
+
+## Project schema
+
+The project can be structured into the following modules:
+
+```
+src/jellyfin_media_normalizer/
+├── __init__.py
+├── main.py
+├── constants.py
+├── settings.py
+├── cli/
+│   ├── __init__.py
+│   └── app.py
+├── models/
+│   ├── __init__.py
+│   ├── media_item.py
+│   ├── media_type.py
+│   ├── parsed_name.py
+│   └── scan_result.py
+├── parsers/
+│   ├── __init__.py
+│   ├── classifier.py
+│   ├── filename_cleaner.py
+│   ├── movie_name_parser.py
+│   └── tv_episode_parser.py
+├── reporters/
+│   ├── __init__.py
+│   └── json_reporter.py
+├── scanners/
+│   ├── __init__.py
+│   └── library_scanner.py
+├── services/
+│   ├── __init__.py
+│   ├── parse_service.py
+│   └── scan_service.py
+└── utils/
+    ├── __init__.py
+    ├── logging.py
+    └── paths.py
+```
+
+## CLI call example
+
+```bash
+uv run jellyfin-media-normalizer scan
+uv run jellyfin-media-normalizer parse
+uv run jellyfin-media-normalizer report-scan
+uv run jellyfin-media-normalizer report-scan --output /workspace/reports/custom-scan.json
+
+# test commands
+uv run pytest
+
+# test with coverage report
+uv run pytest --cov=src/jellyfin_media_normalizer --cov-report=term-missing
+```
