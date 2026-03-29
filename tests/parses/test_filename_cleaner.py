@@ -53,3 +53,36 @@ class TestFilenameCleaner:
         """Return value should not have leading or trailing whitespace."""
         cleaned: str = FilenameCleaner().clean("Movie...2022...WEBRip...mkv")
         assert cleaned == cleaned.strip()
+
+    @pytest.mark.parametrize(
+        ("filename", "expected"),
+        [
+            ("Cesta_českou_krajinou_2020.mkv", "Cesta ceskou krajinou 2020"),
+            ("Žízala.žena.S01E01.mkv", "Zizala zena S01E01"),
+            ("Mašinglil.Slovenská.Série.mkv", "Masinglil Slovenska Serie"),
+            ("Dve.Letní.Noci.2018.mkv", "Dve Letni Noci 2018"),
+            ("Říjany_muži_nebrědá.mkv", "Rijany muzi nebreda"),
+            ("Český.Velký.Rok.S01E02.mkv", "Cesky Velky Rok S01E02"),
+        ],
+    )
+    def test_transliterates_czech_slovak_diacritics(self, filename: str, expected: str) -> None:
+        """Convert Czech/Slovak diacritical marks to ASCII equivalents.
+
+        :param filename: Filename with diacritical marks.
+        :param expected: Expected result with ASCII characters.
+        """
+        cleaner = FilenameCleaner()
+        assert cleaner.clean(filename) == expected
+
+    def test_transliteration_preserves_other_characters(self) -> None:
+        """Transliteration should not affect numbers or standard ASCII."""
+        cleaned: str = FilenameCleaner().clean("Film.Cesky.2024.mkv")
+        assert "2024" in cleaned
+        assert "Film" in cleaned
+        assert "Cesky" in cleaned
+
+    def test_transliteration_handles_mixed_content(self) -> None:
+        """Transliteration should work with mixed Czech/English content."""
+        cleaned: str = FilenameCleaner().clean("Czech.Drama.žížala.2020.mkv")
+        # After transliteration and cleanup, should be normalized
+        assert cleaned == "Czech Drama zizala 2020"
