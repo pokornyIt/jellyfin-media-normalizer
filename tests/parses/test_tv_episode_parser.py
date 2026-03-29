@@ -154,3 +154,115 @@ class TestTvEpisodeParser:
         """
         parser = TvEpisodeParser()
         assert parser._detect_language(normalized_name) == expected
+
+
+class TestTvEpisodeParserHyphenFormat:
+    """Tests for :class:`TvEpisodeParser` with hyphen-separated NNxNN format."""
+
+    @pytest.mark.parametrize(
+        (
+            "raw_name",
+            "normalized_name",
+            "expected_title",
+            "expected_season",
+            "expected_episode",
+        ),
+        [
+            (
+                "Beze-stopy-03x02-Nezabijes.avi",
+                "Beze-stopy-03x02-Nezabijes",
+                "Beze stopy",
+                3,
+                2,
+            ),
+            (
+                "Beze-stopy-03x06-V-pasti-(1 cast).avi",
+                "Beze-stopy-03x06-V-pasti-(1 cast)",
+                "Beze stopy",
+                3,
+                6,
+            ),
+            (
+                "Some-Series-12x15-Episode-title.mkv",
+                "Some-Series-12x15-Episode-title",
+                "Some Series",
+                12,
+                15,
+            ),
+            (
+                "Show-01x01-Pilot.mkv",
+                "Show-01x01-Pilot",
+                "Show",
+                1,
+                1,
+            ),
+        ],
+    )
+    def test_parse_hyphen_format(
+        self,
+        raw_name: str,
+        normalized_name: str,
+        expected_title: str,
+        expected_season: int,
+        expected_episode: int,
+    ) -> None:
+        """Extract TV metadata from hyphen-separated NNxNN filenames.
+
+        :param raw_name: Original filename.
+        :param normalized_name: Cleaned filename.
+        :param expected_title: Expected series title with spaces.
+        :param expected_season: Expected season number.
+        :param expected_episode: Expected episode number.
+        """
+        parser = TvEpisodeParser()
+        parsed: ParsedName = parser.parse(raw_name=raw_name, normalized_name=normalized_name)
+
+        assert parsed.media_type is MediaType.TV_EPISODE
+        assert parsed.title == expected_title
+        assert parsed.season == expected_season
+        assert parsed.episode == expected_episode
+        assert parsed.year is None
+        assert parsed.language_code is None
+
+    def test_hyphen_format_without_title_returns_none_title(self) -> None:
+        """Return None title when NNxNN is at the very start of the name.
+
+        :return: None
+        """
+        parser = TvEpisodeParser()
+        parsed: ParsedName = parser.parse(
+            raw_name="01x05-Episode.avi",
+            normalized_name="01x05-Episode",
+        )
+        assert parsed.media_type is MediaType.TV_EPISODE
+        assert parsed.title is None
+        assert parsed.season == 1
+        assert parsed.episode == 5
+        assert parsed.confidence == pytest.approx(0.65)
+
+    def test_hyphen_format_confidence_with_title(self) -> None:
+        """Use 0.90 confidence when title is present in hyphen format.
+
+        :return: None
+        """
+        parser = TvEpisodeParser()
+        parsed: ParsedName = parser.parse(
+            raw_name="Beze-stopy-03x02-Nezabijes.avi",
+            normalized_name="Beze-stopy-03x02-Nezabijes",
+        )
+        assert parsed.confidence == pytest.approx(0.90)
+
+    def test_sxxexx_takes_priority_over_hyphen(self) -> None:
+        """Prefer SxxExx parsing when both markers appear in the filename.
+
+        :return: None
+        """
+        parser = TvEpisodeParser()
+        parsed: ParsedName = parser.parse(
+            raw_name="Show-03x02-S03E02-Ep.mkv",
+            normalized_name="Show-03x02-S03E02-Ep",
+        )
+        assert parsed.media_type is MediaType.TV_EPISODE
+        assert parsed.season == 3
+        assert parsed.episode == 2
+        assert parsed.confidence == pytest.approx(0.95)

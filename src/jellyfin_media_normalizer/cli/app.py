@@ -10,6 +10,7 @@ import click
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
+from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
 from jellyfin_media_normalizer.services.parse_service import ParseService
 from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
@@ -76,17 +77,39 @@ def scan(ctx: click.Context) -> None:
 
 
 @app.command()
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Optional custom path for the review JSON report.",
+)
 @click.pass_context
-def parse(ctx: click.Context) -> None:
-    """Scan and parse the media library and print a short summary."""
+def parse(ctx: click.Context, output_path: Path | None) -> None:
+    """Scan, parse and validate the media library. Writes a review report."""
     settings: Settings = ctx.obj["settings"]
     scan_service: ScanService = ScanService(settings=settings)
     parse_service: ParseService = ParseService(settings=settings)
+    reporter: ReviewReporter = ReviewReporter()
 
     media_items: list[MediaItem] = scan_service.run()
     parsed_items: list[ParsedMediaItem] = parse_service.run(media_items)
 
     click.echo(f"Parsed {len(parsed_items)} media files.")
+    passed_count: int = sum(1 for item in parsed_items if item.validation_status.value == "passed")
+    review_count: int = sum(
+        1 for item in parsed_items if item.validation_status.value == "review_needed"
+    )
+    failed_count: int = sum(1 for item in parsed_items if item.validation_status.value == "failed")
+    click.echo(
+        "Validation summary: "
+        f"passed={passed_count}, review_needed={review_count}, failed={failed_count}"
+    )
+
+    report_path: Path = output_path or (settings.reports_path / "review-report.json")
+    written_path: Path = reporter.write(parsed_items, report_path)
+    click.echo(f"Review report written to: {written_path}")
+
     preview_limit: int = min(10, len(parsed_items))
     for item in parsed_items[:preview_limit]:
         details: list[str] = [item.media_type, item.normalized_title]
@@ -94,6 +117,8 @@ def parse(ctx: click.Context) -> None:
             details.append(str(item.year))
         if item.season is not None and item.episode is not None:
             details.append(f"S{item.season:02d}E{item.episode:02d}")
+        details.append(f"validation={item.validation_status.value}")
+        details.append(f"confidence={item.validation_confidence.value}")
         click.echo(f"- {item.source.relative_path} => {' | '.join(details)}")
 
 

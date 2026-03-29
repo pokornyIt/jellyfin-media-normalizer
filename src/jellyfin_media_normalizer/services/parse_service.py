@@ -9,6 +9,7 @@ from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.parsers.media_parser import MediaParser
 from jellyfin_media_normalizer.settings import Settings
 from jellyfin_media_normalizer.utils.logging import LoggingMixin
+from jellyfin_media_normalizer.validators.validation_service import ValidationService
 
 
 class MediaItemParserProtocol(Protocol):
@@ -26,22 +27,33 @@ class MediaItemParserProtocol(Protocol):
 class ParseService(LoggingMixin):
     """Coordinate parsing of scanned media items."""
 
-    def __init__(self, settings: Settings, parser: MediaItemParserProtocol | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        parser: MediaItemParserProtocol | None = None,
+        validator: ValidationService | None = None,
+    ) -> None:
         """Initialize the service.
 
         :param settings: Application settings to use for parsing context.
         :param parser: Optional media parser implementation.
+        :param validator: Optional validation service.
         """
         self.settings: Settings = settings
         self.parser: MediaItemParserProtocol = parser or MediaParser()
+        self.validator: ValidationService = validator or ValidationService()
 
     def run(self, media_items: list[MediaItem]) -> list[ParsedMediaItem]:
-        """Run the parsing process on a list of media items.
+        """Run the parsing and validation process on a list of media items.
 
         :param media_items: A list of MediaItem objects to be parsed.
-        :return: A list of ParsedMediaItem objects resulting from the parsing process.
+        :return: A list of ParsedMediaItem objects with validation results.
         """
         self.log.info("Running parse service", extra={"extra": {"item_count": len(media_items)}})
         parsed_items: list[ParsedMediaItem] = [self.parser.parse(item) for item in media_items]
         self.log.info("Parse service finished", extra={"extra": {"item_count": len(parsed_items)}})
-        return parsed_items
+
+        # Run validation on parsed items
+        validated_items: list[ParsedMediaItem] = self.validator.run(parsed_items)
+
+        return validated_items

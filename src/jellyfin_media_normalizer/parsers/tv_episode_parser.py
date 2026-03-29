@@ -15,6 +15,9 @@ class TvEpisodeParser:
     _TV_PATTERN: re.Pattern[str] = re.compile(
         r"\bS(?P<season>\d{2})E(?P<episode>\d{2})\b", re.IGNORECASE
     )
+    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(
+        r"(?:^|-)(?P<season>\d{1,2})x(?P<episode>\d{2})(?=-|$)", re.IGNORECASE
+    )
     _YEAR_PATTERN: re.Pattern[str] = re.compile(r"\b(19\d{2}|20\d{2}|21\d{2})\b")
     _LANGUAGE_PATTERN: re.Pattern[str] = re.compile(r"(?:^| - )(?P<lang>[A-Z]{2})(?:$| )")
     _CZ_SUB_PATTERN: re.Pattern[str] = re.compile(r"\(tit(?:le)?\.?\s*CZ\)", re.IGNORECASE)
@@ -28,21 +31,40 @@ class TvEpisodeParser:
         :return: Parsed filename data.
         """
         tv_match: re.Match[str] | None = self._TV_PATTERN.search(normalized_name)
-        if tv_match is None:
-            return ParsedName(
-                media_type=MediaType.UNKNOWN,
-                raw_name=raw_name,
-                normalized_name=normalized_name,
-                title=None,
-                year=None,
-                season=None,
-                episode=None,
-                language_code=None,
-                has_czech_subtitles=False,
-                has_english_subtitles=False,
-                confidence=0.0,
-            )
+        if tv_match is not None:
+            return self._parse_sxxexx(raw_name, normalized_name, tv_match)
 
+        hyphen_match: re.Match[str] | None = self._TV_HYPHEN_PATTERN.search(normalized_name)
+        if hyphen_match is not None:
+            return self._parse_hyphen_format(raw_name, normalized_name, hyphen_match)
+
+        return ParsedName(
+            media_type=MediaType.UNKNOWN,
+            raw_name=raw_name,
+            normalized_name=normalized_name,
+            title=None,
+            year=None,
+            season=None,
+            episode=None,
+            language_code=None,
+            has_czech_subtitles=False,
+            has_english_subtitles=False,
+            confidence=0.0,
+        )
+
+    def _parse_sxxexx(
+        self,
+        raw_name: str,
+        normalized_name: str,
+        tv_match: re.Match[str],
+    ) -> ParsedName:
+        """Parse a filename using the standard SxxExx marker.
+
+        :param raw_name: Original filename including extension.
+        :param normalized_name: Cleaned filename without extension.
+        :param tv_match: Regex match for the SxxExx pattern.
+        :return: Parsed filename data.
+        """
         season: int = int(tv_match.group("season"))
         episode: int = int(tv_match.group("episode"))
 
@@ -69,6 +91,45 @@ class TvEpisodeParser:
             language_code=language_code,
             has_czech_subtitles=has_czech_subtitles,
             has_english_subtitles=has_english_subtitles,
+            confidence=confidence,
+        )
+
+    def _parse_hyphen_format(
+        self,
+        raw_name: str,
+        normalized_name: str,
+        hyphen_match: re.Match[str],
+    ) -> ParsedName:
+        """Parse a filename using the hyphen-separated NNxNN marker.
+
+        Handles filenames of the form ``Title-words-NNxNN-Episode-title``
+        where hyphens act as word separators. The series title is extracted
+        from the part before the season/episode marker.
+
+        :param raw_name: Original filename including extension.
+        :param normalized_name: Cleaned filename without extension.
+        :param hyphen_match: Regex match for the NNxNN pattern.
+        :return: Parsed filename data.
+        """
+        season: int = int(hyphen_match.group("season"))
+        episode: int = int(hyphen_match.group("episode"))
+
+        title_raw: str = normalized_name[: hyphen_match.start()].strip("-")
+        title: str | None = title_raw.replace("-", " ").strip() or None
+
+        confidence: float = 0.90 if title else 0.65
+
+        return ParsedName(
+            media_type=MediaType.TV_EPISODE,
+            raw_name=raw_name,
+            normalized_name=normalized_name,
+            title=title,
+            year=None,
+            season=season,
+            episode=episode,
+            language_code=None,
+            has_czech_subtitles=False,
+            has_english_subtitles=False,
             confidence=confidence,
         )
 

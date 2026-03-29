@@ -17,6 +17,9 @@ class TestClassifier:
             ("Breaking Bad S01E01", MediaType.TV_EPISODE),
             ("breaking.bad.s01e02.1080p", MediaType.TV_EPISODE),
             ("Dark - s03e08 - DE", MediaType.TV_EPISODE),
+            ("Beze-stopy-03x02-Nezabijes", MediaType.TV_EPISODE),
+            ("Series-01x01-Episode-title", MediaType.TV_EPISODE),
+            ("Some-Show-12x15-ep", MediaType.TV_EPISODE),
             ("Movie Title 1999", MediaType.MOVIE),
             ("Avatar 2009 EN", MediaType.MOVIE),
             ("Some Documentary 2100", MediaType.MOVIE),
@@ -44,6 +47,36 @@ class TestClassifier:
         """Prefer TV classification when TV and year markers are both present.
 
         :param name: Name containing both TV and year patterns.
+        """
+        classifier = Classifier()
+        assert classifier.classify(name) is MediaType.TV_EPISODE
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Beze-stopy-03x02-Nezabijes",
+            "Some-Series-01x05-Episode",
+        ],
+    )
+    def test_hyphen_format_classified_as_tv(self, name: str) -> None:
+        """Classify hyphen-separated NNxNN format as TV episode.
+
+        :param name: Name containing hyphen-format season/episode marker.
+        """
+        classifier = Classifier()
+        assert classifier.classify(name) is MediaType.TV_EPISODE
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "Beze-stopy-03x02-Nezabijes 2005",
+            "Series-01x01-Episode 2000",
+        ],
+    )
+    def test_hyphen_tv_has_priority_over_year(self, name: str) -> None:
+        """Prefer hyphen TV classification over year-based movie classification.
+
+        :param name: Name containing both NNxNN and year markers.
         """
         classifier = Classifier()
         assert classifier.classify(name) is MediaType.TV_EPISODE
