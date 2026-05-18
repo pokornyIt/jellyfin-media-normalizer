@@ -64,6 +64,16 @@ class TestTvEpisodeParser:
                 None,
                 False,
             ),
+            (
+                "01x03 Pes obranar (But I Didn't Shoot the Deputy) DVDRip-hgr.avi",
+                "Pes obranar S01E03",
+                "Pes obranar",
+                1,
+                3,
+                None,
+                None,
+                False,
+            ),
         ],
     )
     def test_parse_tv_episode(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Protocol
 
 from jellyfin_media_normalizer.models.media_item import MediaItem
@@ -68,6 +69,18 @@ class TvEpisodeParserProtocol(Protocol):
 class MediaParser(LoggingMixin):
     """Parse discovered media items into a structured representation."""
 
+    _SEASON_DIR_PATTERN: re.Pattern[str] = re.compile(
+        r"^(?:s\d{1,2}|season\s*\d{1,2}|serie\s*\d{1,2}|series\s*\d{1,2})$",
+        re.IGNORECASE,
+    )
+    """Match directories that look like season folders (S01, Season 1, etc.)."""
+
+    _EMBEDDED_PROVIDER_TAG_PATTERN: re.Pattern[str] = re.compile(
+        r"\[(?:imdbid-tt\d+|tmdbid-\d+|tvdbid-\d+)\]",
+        re.IGNORECASE,
+    )
+    """Match embedded provider ID tags in folder names."""
+
     def __init__(
         self,
         cleaner: FilenameCleanerProtocol | None = None,
@@ -99,6 +112,10 @@ class MediaParser(LoggingMixin):
 
         if media_type == MediaType.TV_EPISODE:
             parsed: ParsedName = self._tv_parser.parse(raw_name, normalized_name)
+            if not parsed.title:
+                fallback_title: str | None = self._infer_series_title_from_path(item)
+                if fallback_title is not None:
+                    parsed.title = fallback_title
         elif media_type == MediaType.MOVIE:
             parsed = self._movie_parser.parse(raw_name, normalized_name)
         else:
@@ -140,3 +157,26 @@ class MediaParser(LoggingMixin):
             confidence=parsed.confidence,
             issues=issues,
         )
+
+    def _infer_series_title_from_path(self, item: MediaItem) -> str | None:
+        """Infer TV series title from parent directories when filename title is missing.
+
+        If the immediate parent directory looks like a season folder (for example
+        ``Serie 01`` or ``S01``), use one level above as series title.
+
+        :param item: Parsed media source item.
+        :return: Inferred series title or ``None``.
+        """
+        parent_parts: tuple[str, ...] = item.relative_path.parent.parts
+        if not parent_parts:
+            return None
+
+        candidate: str = parent_parts[-1]
+        if self._SEASON_DIR_PATTERN.fullmatch(candidate) and len(parent_parts) >= 2:
+            candidate = parent_parts[-2]
+
+        candidate = self._EMBEDDED_PROVIDER_TAG_PATTERN.sub("", candidate).strip()
+        if candidate == "":
+            return None
+
+        return candidate

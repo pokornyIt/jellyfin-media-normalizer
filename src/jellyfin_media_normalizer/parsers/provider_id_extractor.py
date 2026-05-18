@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import re
 
-from jellyfin_media_normalizer.constants import PROVIDER_IMDB, PROVIDER_TMDB
+from jellyfin_media_normalizer.constants import PROVIDER_IMDB, PROVIDER_TMDB, PROVIDER_TVDB
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.models.provider_match import ProviderMatch
 
 IMDB_ID_PATTERN: re.Pattern[str] = re.compile(r"\[imdbid-(tt\d+)\]", re.IGNORECASE)
 TMDB_ID_PATTERN: re.Pattern[str] = re.compile(r"\[tmdbid-(\d+)\]", re.IGNORECASE)
+TVDB_ID_PATTERN: re.Pattern[str] = re.compile(r"\[tvdbid-(\d+)\]", re.IGNORECASE)
 
 PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (IMDB_ID_PATTERN, PROVIDER_IMDB),
     (TMDB_ID_PATTERN, PROVIDER_TMDB),
+    (TVDB_ID_PATTERN, PROVIDER_TVDB),
 ]
 
 

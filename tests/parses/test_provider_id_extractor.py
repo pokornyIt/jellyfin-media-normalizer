@@ -19,6 +19,8 @@ from jellyfin_media_normalizer.parsers.provider_id_extractor import extract_prov
         ("Avatar (2009) [IMDBID-tt0499549].mkv", "imdb", "tt0499549"),
         ("Avatar (2009) [tmdbid-19995].mkv", "tmdb", "19995"),
         ("Avatar (2009) [TMDBID-19995].mkv", "tmdb", "19995"),
+        ("Show Folder [tvdbid-76131]/S01E01.mkv", "tvdb", "76131"),
+        ("Show Folder [TVDBID-76131]/S01E01.mkv", "tvdb", "76131"),
     ],
 )
 def test_extract_provider_id_from_source_match(

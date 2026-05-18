@@ -7,6 +7,7 @@ from pathlib import Path
 from jellyfin_media_normalizer.models.confidence_level import ConfidenceLevel
 from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
+from jellyfin_media_normalizer.models.provider_match import ProviderMatch
 from jellyfin_media_normalizer.models.validation_result import ValidationResult
 from jellyfin_media_normalizer.models.validation_status import ValidationStatus
 from jellyfin_media_normalizer.reporters.review_html_reporter import ReviewHtmlReporter
@@ -146,3 +147,89 @@ class TestReviewHtmlReporter:
         assert "<img src=x onerror=alert(1)>" not in content
         assert "&lt;img src=x onerror=alert(1)&gt;" in content
         assert "&lt;script&gt;boom&lt;/script&gt;" in content
+
+    def test_write_generates_provider_links_for_search(self, tmp_path: Path) -> None:
+        """Generate provider search links when provider_match is not available.
+
+        :param tmp_path: Temporary test directory.
+        """
+        reporter = ReviewHtmlReporter()
+        output_path: Path = tmp_path / "parse-review-report.html"
+        items: list[ParsedMediaItem] = [
+            _make_item(
+                path="Movies/Avatar.mkv",
+                media_type="movie",
+                title="Avatar",
+                status=ValidationStatus.REVIEW_NEEDED,
+            ),
+            _make_item(
+                path="Series/Show/S01/01.mkv",
+                media_type="tv_episode",
+                title="Show Title",
+                status=ValidationStatus.REVIEW_NEEDED,
+            ),
+        ]
+
+        reporter.write(items, output_path)
+        content: str = output_path.read_text(encoding="utf-8")
+
+        # Check for TMDb search links
+        assert "https://www.themoviedb.org/search/movie?query=Avatar" in content
+        assert "https://www.themoviedb.org/search/tv?query=Show+Title" in content
+        # Check for TVDB search links
+        assert "https://thetvdb.com/search?query=Avatar" in content
+        assert "https://thetvdb.com/search?query=Show+Title" in content
+        # Check for link styling
+        assert 'target="_blank"' in content
+        assert 'rel="noopener"' in content
+
+    def test_write_generates_direct_provider_links_with_id(self, tmp_path: Path) -> None:
+        """Generate direct provider links when provider_match has an ID.
+
+        :param tmp_path: Temporary test directory.
+        """
+        reporter = ReviewHtmlReporter()
+        output_path: Path = tmp_path / "parse-review-report.html"
+
+        movie_item = _make_item(
+            path="Movies/Avatar.mkv",
+            media_type="movie",
+            title="Avatar",
+            status=ValidationStatus.REVIEW_NEEDED,
+        )
+        movie_item.provider_match = ProviderMatch(
+            provider="tmdb",
+            provider_id="19995",
+            confidence=0.95,
+            reason="Matched by title and year",
+            lookup_key="movie|avatar",
+        )
+
+        tv_item = _make_item(
+            path="Series/Show/S01/01.mkv",
+            media_type="tv_episode",
+            title="Show Title",
+            season=1,
+            episode=1,
+            year=None,
+            status=ValidationStatus.REVIEW_NEEDED,
+        )
+        tv_item.provider_match = ProviderMatch(
+            provider="tmdb",
+            provider_id="12345",
+            confidence=0.85,
+            reason="Matched by title",
+            lookup_key="tv_series|show+title",
+        )
+
+        items: list[ParsedMediaItem] = [movie_item, tv_item]
+
+        reporter.write(items, output_path)
+        content: str = output_path.read_text(encoding="utf-8")
+
+        # Check for direct TMDb links
+        assert "https://www.themoviedb.org/movie/19995" in content
+        assert "https://www.themoviedb.org/tv/12345" in content
+        # Search links should still be present for TVDB
+        assert "https://thetvdb.com/search?query=Avatar" in content
+        assert "https://thetvdb.com/search?query=Show+Title" in content

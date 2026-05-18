@@ -79,7 +79,7 @@ or series folder name.
 Provider priority:
 
 - Movies: primary lookup through TMDb, with one final selected ID stored in the folder name
-- TV Series: primary lookup through TVDB or TMDb TV, with one final selected ID stored in the series folder name
+- TV Series: online lookup order is TMDb TV first, then TVDB; one final selected ID is stored in the series folder name
 - Episodes: no provider ID lookup; no ID stored in the filename
 
 ## Design Principles
@@ -157,7 +157,9 @@ Provider IDs are resolved in this priority order:
    that ID is used directly and no lookup is performed.
 2. **Cache** — the local JSON cache at `data/workspace/cache/provider_ids.json` is checked first for
    a matching lookup key.
-3. **Online API** — if the cache has no match and API keys are configured, TMDb (movies) or TVDB (TV series) is queried.
+3. **Online API** — if the cache has no match and API keys are configured, clients are queried in this order:
+    - `movie`: TMDb
+    - `tv_episode` (series-level lookup): TMDb TV, then TVDB
 
 Items classified as `unknown` are skipped entirely.
 

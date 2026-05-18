@@ -178,6 +178,39 @@ class ReviewHtmlReporter(LoggingMixin):
     .issues { color: var(--failed-text); max-width: 320px; }
     .warnings { color: #a46300; max-width: 320px; }
 
+    .provider-links {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .provider-links a {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid;
+    }
+
+    .provider-links a:hover {
+      text-decoration: underline;
+    }
+
+    .provider-links a[href*="themoviedb"] {
+      background: #01b4e4;
+      color: white;
+      border-color: #0097bd;
+    }
+
+    .provider-links a[href*="thetvdb"] {
+      background: #1a5c75;
+      color: white;
+      border-color: #0d3a4a;
+    }
+
     .no-data {
       padding: 18px;
       color: var(--muted);
@@ -230,6 +263,7 @@ class ReviewHtmlReporter(LoggingMixin):
             <th>Validation confidence</th>
             <th>Issues</th>
             <th>Warnings</th>
+            <th>Provider Links</th>
             <th>Path</th>
           </tr>
         </thead>
@@ -250,6 +284,7 @@ class ReviewHtmlReporter(LoggingMixin):
             <td>{{ row.validation_confidence }}</td>
             <td class=\"issues\">{{ row.issues }}</td>
             <td class=\"warnings\">{{ row.warnings }}</td>
+            <td><div class=\"provider-links\">{{ row.provider_links|safe }}</div></td>
             <td>{{ row.path }}</td>
           </tr>
           {% endfor %}
@@ -372,8 +407,55 @@ class ReviewHtmlReporter(LoggingMixin):
             "validation_confidence": item.validation_confidence.value,
             "issues": "; ".join(issues) if issues else "-",
             "warnings": "; ".join(warnings) if warnings else "-",
+            "provider_links": self._build_provider_links(item),
             "path": str(item.source.relative_path),
         }
+
+    def _build_provider_links(self, item: ParsedMediaItem) -> str:
+        """Build HTML provider links for manual ID lookup.
+
+        :param item: Parsed media item to generate links for.
+        :return: HTML string with provider links (pre-escaped for safe rendering).
+        """
+        links: list[str] = []
+        title_encoded: str = item.title.replace('"', "&quot;").replace("&", "&amp;")
+
+        if item.media_type == "movie":
+            # TMDb movie link
+            if item.provider_match and item.provider_match.provider == "tmdb":
+                tmdb_url = f"https://www.themoviedb.org/movie/{item.provider_match.provider_id}"
+                links.append(f'<a href="{tmdb_url}" target="_blank" rel="noopener">TMDb</a>')
+            else:
+                search_query = title_encoded.replace(" ", "+")
+                tmdb_search = f"https://www.themoviedb.org/search/movie?query={search_query}"
+                links.append(
+                    f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>'
+                )
+
+            # TVDB movie link (search only)
+            search_query = title_encoded.replace(" ", "+")
+            tvdb_search = f"https://thetvdb.com/search?query={search_query}"
+            links.append(f'<a href="{tvdb_search}" target="_blank" rel="noopener">TVDB Search</a>')
+        else:
+            # TV episode link - use series title
+            series_title_encoded: str = item.title.replace('"', "&quot;").replace("&", "&amp;")
+
+            if item.provider_match and item.provider_match.provider == "tmdb":
+                tvdb_url = f"https://www.themoviedb.org/tv/{item.provider_match.provider_id}"
+                links.append(f'<a href="{tvdb_url}" target="_blank" rel="noopener">TMDb</a>')
+            else:
+                search_query = series_title_encoded.replace(" ", "+")
+                tmdb_search = f"https://www.themoviedb.org/search/tv?query={search_query}"
+                links.append(
+                    f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>'
+                )
+
+            # TVDB TV search
+            search_query = series_title_encoded.replace(" ", "+")
+            tvdb_search = f"https://thetvdb.com/search?query={search_query}"
+            links.append(f'<a href="{tvdb_search}" target="_blank" rel="noopener">TVDB Search</a>')
+
+        return " ".join(links)
 
     def _render(self, payload: dict[str, Any]) -> str:
         """Render HTML from a payload using a safe Jinja environment.

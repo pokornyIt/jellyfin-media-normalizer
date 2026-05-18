@@ -35,8 +35,8 @@ The `parse` command:
 1. Scans the media library
 2. Classifies and normalizes filenames
 3. Validates parsed results
-4. Looks up provider IDs (TMDb, TVDB) — first checks embedded IDs in folder names, then the local cache,
-   then online APIs
+4. Looks up provider IDs — first checks embedded IDs in folder names, then the local cache,
+   then online APIs in this order: movie -> TMDb; tv_episode (series-level lookup) -> TMDb TV, then TVDB
 5. Writes `data/workspace/reports/parse-review-report.json`
 6. Writes `data/workspace/reports/parse-review-report.html` for human-friendly review triage
 7. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
@@ -163,7 +163,8 @@ Provider ID resolution order:
 
 1. Embedded ID in folder name — e.g. `[imdbid-tt1234567]` or `[tmdbid-12345]`
 2. Local provider cache (`data/workspace/cache/provider_ids.json`)
-3. Online API (TMDb or TVDB, if API keys are configured)
+3. Online API (if API keys are configured), in this order: movie -> TMDb; tv_episode
+  (series-level lookup) -> TMDb TV, then TVDB
 
 ---
 

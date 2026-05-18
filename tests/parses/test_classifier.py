@@ -29,6 +29,11 @@ class TestClassifier:
             ("Some Documentary 2100", MediaType.MOVIE),
             ("Readme file", MediaType.UNKNOWN),
             ("Random_name_without_markers", MediaType.UNKNOWN),
+            (
+                "01x03 Pes obranar (But I Didn't Shoot the Deputy) DVDRip-hgr",
+                MediaType.TV_EPISODE,
+            ),
+            ("S07E11", MediaType.TV_EPISODE),
         ],
     )
     def test_classify(self, name: str, expected: MediaType) -> None:

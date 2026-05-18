@@ -134,6 +134,59 @@ class TestMediaParserParse:
         assert parsed.confidence == pytest.approx(0.2)
         assert parsed.issues == ["Unable to detect movie year or TV episode pattern."]
 
+    @pytest.mark.parametrize(
+        ("item", "expected"),
+        [
+            (
+                "Serial Komedialni/Zenaty se zavazky/Serie 01/"
+                "01x03 Pes obranar (But I Didn't Shoot the Deputy) DVDRip-hgr.avi",
+                {
+                    "media_type": "tv_episode",
+                    "title": "Zenaty se zavazky",
+                    "season": 1,
+                    "episode": 3,
+                    "not_issues": "Title could not be extracted from the filename.",
+                },
+            ),
+            (
+                "Serial Komedialni/Orange Is The New Black/S07/S07E11.avi",
+                {
+                    "media_type": "tv_episode",
+                    "title": "Orange Is The New Black",
+                    "season": 7,
+                    "episode": 11,
+                    "not_issues": "Title could not be extracted from the filename.",
+                },
+            ),
+            (
+                "Serial Komedialni/Zenaty se zavazky [tmdbid-76385]/Serie 01/01x03 "
+                "Pes obranar (But I Didn't Shoot the Deputy) DVDRip-hgr.avi",
+                {
+                    "media_type": "tv_episode",
+                    "title": "Zenaty se zavazky",
+                    "season": 1,
+                    "episode": 3,
+                    "not_issues": "Title could not be extracted from the filename.",
+                },
+            ),
+        ],
+    )
+    def test_parse_tv_episode_uses_parent_folder_when_title_missing(
+        self, item: str, expected: dict[str, str | int | None]
+    ) -> None:
+        """Infer series title from path when TV filename starts with NNxNN marker.
+
+        :return: None
+        """
+        parsed: ParsedMediaItem = MediaParser().parse(_item(item))
+
+        assert parsed.media_type == expected["media_type"]
+        assert parsed.title == expected["title"]
+        assert parsed.normalized_title == expected["title"]
+        assert parsed.season == expected["season"]
+        assert parsed.episode == expected["episode"]
+        assert expected["not_issues"] not in parsed.issues
+
 
 class TestMediaParserLanguageExtraction:
     """Tests for language extraction behavior in parse outcomes."""

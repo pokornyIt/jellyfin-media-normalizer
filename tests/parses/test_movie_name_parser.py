@@ -62,6 +62,14 @@ class TestMovieNameParser:
                 None,
                 False,
             ),
+            (
+                "Pes obranar (But I Didn't Shoot the Deputy) DVDRip-hgr.avi",
+                "Pes obranar",
+                "Pes obranar",
+                None,
+                None,
+                False,
+            ),
         ],
     )
     def test_parse(
