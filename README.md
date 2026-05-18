@@ -39,6 +39,7 @@ The `parse` command:
    then online APIs
 5. Writes `data/workspace/reports/parse-review-report.json`
 6. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
+7. Writes `data/workspace/reports/unresolved-provider-report.html` for human-friendly triage
 
 ## Configuration
 
@@ -153,6 +154,7 @@ Validation summary: passed=13127, review_needed=215, failed=0
 Provider lookup summary: resolved=12697 (cache=12695, online=0, embedded=2), unresolved=430
 Review report written to: data/workspace/reports/parse-review-report.json
 Unresolved provider report written to: data/workspace/reports/unresolved-provider-report.json
+Unresolved HTML report written to: data/workspace/reports/unresolved-provider-report.html
 ```
 
 Provider ID resolution order:
