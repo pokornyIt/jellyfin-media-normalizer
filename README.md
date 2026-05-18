@@ -1,8 +1,10 @@
 # jellyfin-media-normalizer
 
-Normalize movie and TV series names for Jellyfin. Scans a media library, classifies files, validates parsed results, and looks up provider IDs from TMDb and TVDB.
+Normalize movie and TV series names for Jellyfin. Scans a media library, classifies files, validates parsed results,
+and looks up provider IDs from TMDb and TVDB.
 
-For the full project design, naming conventions, and implementation phases, see [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md).
+For the full project design, naming conventions, and implementation phases,
+see [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md).
 
 ## Requirements
 
@@ -29,10 +31,12 @@ uv run jellyfin-media-normalizer parse
 ```
 
 The `parse` command:
+
 1. Scans the media library
 2. Classifies and normalizes filenames
 3. Validates parsed results
-4. Looks up provider IDs (TMDb, TVDB) — first checks embedded IDs in folder names, then the local cache, then online APIs
+4. Looks up provider IDs (TMDb, TVDB) — first checks embedded IDs in folder names, then the local cache,
+   then online APIs
 5. Writes `data/workspace/reports/parse-review-report.json`
 6. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
 
@@ -62,6 +66,7 @@ JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 
 ### Full environment variable reference
 
+<!-- markdownlint-disable MD013 -->
 | Variable                                | Default                     | Description                                         |
 | --------------------------------------- | --------------------------- | --------------------------------------------------- |
 | `JMN_APP_NAME`                          | `jellyfin-media-normalizer` | Application name used in logs                       |
@@ -77,6 +82,7 @@ JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 | `JMN_TMDB_API_KEY`                      | *(none)*                    | TMDb API key for online movie lookup                |
 | `JMN_TVDB_API_KEY`                      | *(none)*                    | TVDB API key for online TV series lookup            |
 | `JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Log progress every N items during provider lookup   |
+<!-- markdownlint-enable MD013 -->
 
 ### TMDb API Key
 
@@ -93,16 +99,19 @@ TVDB API keys are **project-based**, not personal. You must register your applic
    - **Company / Project Revenue:** `Less than $50k per year`
    - **Company or Project Name:** `jellyfin-media-normalizer`
    - **Description:**
-     ```
+
+     ```text
      Non-commercial open-source tool for normalizing and validating media library
      names for Jellyfin. Uses TVDB data for TV series metadata matching.
      Project: https://github.com/pokornyIt/jellyfin-media-normalizer
      ```
+
 3. Copy the **API Key** and set `JMN_TVDB_API_KEY` to that value.
 
 TVDB's free tier requires attribution. Comply with their [licensing terms](https://www.thetvdb.com/api-information).
 
-**Note:** Without API keys, provider lookup uses only the local cache. Previously resolved items are still matched; new items are left unresolved.
+**Note:** Without API keys, provider lookup uses only the local cache. Previously resolved items are still matched;
+new items are left unresolved.
 
 ## CLI Commands
 
@@ -115,7 +124,8 @@ uv run jellyfin-media-normalizer scan
 ```
 
 Output:
-```
+
+```text
 Discovered 13342 media files.
 - Filmy/Akcni/Avatar (2009) - CZ.mkv
 ...
@@ -136,7 +146,8 @@ uv run jellyfin-media-normalizer parse --output /path/to/custom-report.json
 ```
 
 Output:
-```
+
+```text
 Parsed 13342 media files.
 Validation summary: passed=13127, review_needed=215, failed=0
 Provider lookup summary: resolved=12697 (cache=12695, online=0, embedded=2), unresolved=430
@@ -145,6 +156,7 @@ Unresolved provider report written to: data/workspace/reports/unresolved-provide
 ```
 
 Provider ID resolution order:
+
 1. Embedded ID in folder name — e.g. `[imdbid-tt1234567]` or `[tmdbid-12345]`
 2. Local provider cache (`data/workspace/cache/provider_ids.json`)
 3. Online API (TMDb or TVDB, if API keys are configured)
@@ -173,7 +185,8 @@ uv run jellyfin-media-normalizer bootstrap-providers
 ```
 
 Output:
-```
+
+```text
 Provider cache bootstrapped: data/workspace/cache/provider_ids.json
 ```
 

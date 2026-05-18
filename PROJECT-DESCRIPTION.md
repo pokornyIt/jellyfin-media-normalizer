@@ -1,11 +1,18 @@
 # PROJECT-DESCRIPTION
+
 ## Goal
 
-The goal of this project is to consolidate and normalize a large media library stored on a Synology NAS so that it is clean, consistent, and ready for reliable use in Jellyfin.
+The goal of this project is to consolidate and normalize a large media library stored on
+a Synology NAS so that it is clean, consistent, and ready for reliable use in Jellyfin.
 
-The library contains more than 9,000 video files across approximately 1,000 folders and includes both movies and TV series. The main purpose of the project is to standardize file and folder names, improve media identification, and prepare the library for controlled batch renaming without unnecessary metadata clutter on disk.
+The library contains more than 9,000 video files across approximately 1,000 folders and includes both
+movies and TV series. The main purpose of the project is to standardize file and folder names,
+improve media identification, and prepare the library for controlled batch renaming without unnecessary metadata
+clutter on disk.
 
-This project does not use `.nfo` files. Jellyfin identification will instead rely on a single provider ID stored in the main folder name of a movie or TV series, using Jellyfin-supported identifier formats such as `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
+This project does not use `.nfo` files. Jellyfin identification will instead rely on a single provider ID stored
+in the main folder name of a movie or TV series, using Jellyfin-supported identifier formats
+such as `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
 
 ## Scope
 
@@ -63,9 +70,11 @@ Language markers use standard two-letter codes: `CZ`, `EN`, `DE`, `SK`, `FR`, `I
 
 ## Metadata Strategy
 
-The project avoids local metadata sidecar files such as `.nfo` in order to keep the filesystem readable and uncluttered when browsing the storage directly.
+The project avoids local metadata sidecar files such as `.nfo` in order to keep the filesystem readable
+and uncluttered when browsing the storage directly.
 
-Instead, Jellyfin identification will be improved by adding a single provider ID only to the main movie or series folder name.
+Instead, Jellyfin identification will be improved by adding a single provider ID only to the main movie
+or series folder name.
 
 Provider priority:
 
@@ -90,7 +99,7 @@ Provider priority:
 
 The project is organized into distinct layers. Each layer has a single responsibility:
 
-```
+```text
 src/jellyfin_media_normalizer/
 ├── constants.py            — project-wide string and tuple constants
 ├── settings.py             — runtime configuration via environment variables
@@ -144,8 +153,10 @@ src/jellyfin_media_normalizer/
 
 Provider IDs are resolved in this priority order:
 
-1. **Embedded ID** — if the folder name already contains `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`, that ID is used directly and no lookup is performed.
-2. **Cache** — the local JSON cache at `data/workspace/cache/provider_ids.json` is checked first for a matching lookup key.
+1. **Embedded ID** — if the folder name already contains `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`,
+   that ID is used directly and no lookup is performed.
+2. **Cache** — the local JSON cache at `data/workspace/cache/provider_ids.json` is checked first for
+   a matching lookup key.
 3. **Online API** — if the cache has no match and API keys are configured, TMDb (movies) or TVDB (TV series) is queried.
 
 Items classified as `unknown` are skipped entirely.
@@ -165,41 +176,52 @@ Items classified as `unknown` are skipped entirely.
 
 #### Phase 1 — Inventory and Scan
 
-Scans the media library and collects file paths, folder structure, and filename patterns. Detects supported video extensions. Produces a flat list of `MediaItem` objects used as input for all following phases.
+Scans the media library and collects file paths, folder structure, and filename patterns.
+Detects supported video extensions. Produces a flat list of `MediaItem` objects used as input for all following phases.
 
 #### Phase 2 — Classification
 
 Each item is classified into one of: `movie`, `tv_episode`, or `unknown`.
 
-Classification is based on filename patterns: a year in parentheses indicates a movie; an `SxxExx` marker (or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`.
+Classification is based on filename patterns: a year in parentheses indicates a movie; an `SxxExx` marker
+(or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`.
 
 #### Phase 3 — Name Normalization
 
-Normalized names are parsed into structured `ParsedName` objects containing title, year, season/episode, language code, and subtitle flags. Release tags (codec names, resolutions, quality markers) are stripped before parsing.
+Normalized names are parsed into structured `ParsedName` objects containing title, year, season/episode, language code,
+and subtitle flags. Release tags (codec names, resolutions, quality markers) are stripped before parsing.
 
 #### Phase 4 — Validation
 
-All parsed items are validated for structural completeness and internal consistency. Each item receives a `ValidationStatus` (`passed`, `review_needed`, or `failed`) and a `ConfidenceLevel` (`high`, `medium`, or `low`). High-confidence items proceed automatically; others are flagged for review.
+All parsed items are validated for structural completeness and internal consistency.
+Each item receives a `ValidationStatus` (`passed`, `review_needed`, or `failed`)
+and a `ConfidenceLevel` (`high`, `medium`, or `low`). High-confidence items proceed automatically;
+others are flagged for review.
 
 #### Phase 5 — Provider ID Lookup
 
-After validation, every non-unknown item is matched to a single provider ID. Lookup follows the chain described in the [Provider ID Resolution](#provider-id-resolution) section above.
+After validation, every non-unknown item is matched to a single provider ID. Lookup follows the chain described
+in the [Provider ID Resolution](#provider-id-resolution) section above.
 
-The result for each resolved item is a `ProviderMatch` object containing: `provider`, `provider_id`, `confidence`, `reason`, and `lookup_key`. Items without a match are written to the unresolved report.
+The result for each resolved item is a `ProviderMatch` object containing: `provider`, `provider_id`, `confidence`,
+`reason`, and `lookup_key`. Items without a match are written to the unresolved report.
 
 #### Phase 6 — Rename Planning *(planned)*
 
-A rename manifest will be generated before any filesystem change is made. It will contain: original path, media type, normalized title data, selected provider ID, confidence, proposed new path, and action status.
+A rename manifest will be generated before any filesystem change is made. It will contain: original path, media type,
+normalized title data, selected provider ID, confidence, proposed new path, and action status.
 
 Dry-run mode will be the default. Actual execution requires an explicit opt-in flag.
 
 #### Phase 7 — Batch Rename Execution *(planned)*
 
-Renames will be executed in logical batches (movies by folder, TV series one show at a time) only after the manifest has been reviewed. The executor will support execution logging, collision detection, and rollback capability.
+Renames will be executed in logical batches (movies by folder, TV series one show at a time) only after the manifest
+has been reviewed. The executor will support execution logging, collision detection, and rollback capability.
 
 #### Phase 8 — Review Workflow *(planned)*
 
-Items flagged for review will be exported in additional formats (HTML, CSV) to allow manual inspection outside of JSON. This phase has no side effects on the filesystem.
+Items flagged for review will be exported in additional formats (HTML, CSV) to allow manual inspection outside of JSON.
+This phase has no side effects on the filesystem.
 
 ## Expected Outcome
 

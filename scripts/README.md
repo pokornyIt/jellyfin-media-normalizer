@@ -6,6 +6,7 @@ This folder contains helper scripts for exporting a filesystem structure and rec
 ## 1. nas_scan.sh
 
 Scans the current directory recursively and generates:
+
 - folders.txt: all folders as relative paths
 - files.txt: all files as relative paths
 
