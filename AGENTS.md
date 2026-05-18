@@ -2,9 +2,24 @@
 
 You are assisting with the `jellyfin-media-normalizer` project.
 
+## Instruction File Integration
+
+When editing files, also follow repository-scoped instruction files in `.github/instructions/`:
+
+- `markdown.instructions.md` for `**/*.md`
+- `python.instructions.md` for `**/*.py`
+- `yaml.instructions.md` for `**/*.yaml` and `**/*.yml`
+
+If there is a conflict, follow this precedence:
+
+1. direct user request
+2. `AGENTS.md`
+3. matching `.github/instructions/*.md` file
+
 ## Project Purpose
 
-This project is used to scan, classify, validate, normalize, and safely rename a large movie and TV series library for Jellyfin.
+This project is used to scan, classify, validate, normalize, and safely rename a large movie
+and TV series library for Jellyfin.
 
 The project must:
 
@@ -90,12 +105,12 @@ def example(name: str) -> str:
 
 Rules:
 
-* Use `:param var: description`
-* Use `:return: description` where applicable
-* Do not use `:type:`
-* Do not use `:rtype:`
-* Keep docstrings concise and useful
-* Every public and internal class/function must have a docstring
+- Use `:param var: description`
+- Use `:return: description` where applicable
+- Do not use `:type:`
+- Do not use `:rtype:`
+- Keep docstrings concise and useful
+- Every public and internal class/function must have a docstring
 
 ## Testing Rules
 
@@ -103,14 +118,14 @@ Tests must use `pytest`.
 
 Testing conventions:
 
-* Test files should reflect the source structure.
-* Test classes should correspond to the tested classes.
-* Test class names should start with `Test`.
-* Test functions should start with `test_`.
-* Prefer parametrized tests using `pytest.mark.parametrize` where it improves clarity and coverage.
-* Avoid unnecessary mocks when simple input/output testing is enough.
-* Focus tests on parser behavior, validation rules, provider ID lookup decisions, and rename planning.
-* Cover valid, invalid, edge, and ambiguous cases.
+- Test files should reflect the source structure.
+- Test classes should correspond to the tested classes.
+- Test class names should start with `Test`.
+- Test functions should start with `test_`.
+- Prefer parametrized tests using `pytest.mark.parametrize` where it improves clarity and coverage.
+- Avoid unnecessary mocks when simple input/output testing is enough.
+- Focus tests on parser behavior, validation rules, provider ID lookup decisions, and rename planning.
+- Cover valid, invalid, edge, and ambiguous cases.
 
 Example:
 
@@ -151,26 +166,37 @@ scanners/     — Phase 1: filesystem scan and inventory
 parsers/      — Phase 2–3: classification and name normalization
 validators/   — Phase 4: validation and confidence scoring
 providers/    — Phase 5: provider ID lookup (TMDb, TVDB, IMDb)
+services/     — orchestration of scan/parse/provider workflows
+reporters/    — review report generation (currently JSON and planned CSV and HTML)
+cli/          — command entry points and command dispatch
+utils/        — shared infrastructure (logging, paths)
+settings.py   — runtime configuration and path defaults
+constants.py  — shared constants and defaults
+
+# reserved/planned layers
 planners/     — Phase 6: rename manifest generation
 executors/    — Phase 7: batch rename execution and rollback logging
-reporters/    — Phase 8: review report generation (CSV, JSON, HTML)
-cli/          — entry points and command dispatch
 ```
 
 Notes on specific layers:
 
-* `providers/` handles all external API communication for provider ID lookup. This is the only layer that makes network requests. It should be replaceable without affecting other layers.
-* `reporters/` produces review output for ambiguous matches, unresolved filenames, and items requiring manual approval. It has no side effects on the filesystem.
-* `executors/` must support dry-run mode. Dry-run should be the default. Actual rename execution requires an explicit opt-in flag.
+- `providers/` handles all external API communication for provider ID lookup. This is the only layer that makes network
+  requests. It should be replaceable without affecting other layers.
+- `reporters/` produces review output for ambiguous matches, unresolved filenames, and items requiring manual approval.
+  It has no side effects on the filesystem.
+- `services/` coordinates parser/validator/provider steps and should remain free of direct filesystem side effects
+  outside explicit scan/report workflows.
+- `executors/` must support dry-run mode. Dry-run should be the default. Actual rename execution requires
+  an explicit opt-in flag.
 
 Suggested principles:
 
-* never rename files directly from raw parsing or raw provider lookup
-* always generate a validated plan first
-* keep side effects isolated to `executors/`
-* make dry-run behavior easy to support
-* design for batch execution and rollback logging
-* keep provider integration replaceable
+- never rename files directly from raw parsing or raw provider lookup
+- always generate a validated plan first
+- keep side effects isolated to `executors/`
+- make dry-run behavior easy to support
+- design for batch execution and rollback logging
+- keep provider integration replaceable
 
 ## What Copilot Should Optimize For
 
@@ -190,15 +216,15 @@ Avoid hidden behavior, magic defaults, and tightly coupled code.
 
 When proposing code:
 
-* include complete functions or classes
-* preserve project conventions
-* include docstrings
-* include type hints
-* include tests when relevant
-* avoid placeholder logic unless explicitly requested
+- include complete functions or classes
+- preserve project conventions
+- include docstrings
+- include type hints
+- include tests when relevant
+- avoid placeholder logic unless explicitly requested
 
 When modifying code:
 
-* keep the existing structure unless there is a clear reason to improve it
-* prefer minimal safe changes
-* preserve compatibility with the current project design
+- keep the existing structure unless there is a clear reason to improve it
+- prefer minimal safe changes
+- preserve compatibility with the current project design

@@ -6,6 +6,7 @@ repos:
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
+        exclude: \.(md)$  # Allow trailing whitespace in markdown files
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=5120"]  # 5 MB; adjust as needed
@@ -38,3 +39,9 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.44.0
+    hooks:
+      - id: markdownlint
+        files: \.md$
