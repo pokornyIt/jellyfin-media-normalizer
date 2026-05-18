@@ -27,6 +27,23 @@
             ]
         }
     ],
+    "overrides": [
+        {
+            "filename": [
+                "**/cs/**/*.md",
+                "**/*.cs.md",
+                "**/*-cs.md"
+            ],
+            "language": "en,cs",
+            "ignoreWords": [
+                "submodulů",
+                "commitů",
+                "releasu",
+                "footeru",
+                "changelogu"
+            ]
+        }
+    ],
     "flagWords": [
         "hte"
     ],

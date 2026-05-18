@@ -51,6 +51,13 @@ These rules are non-negotiable and must be preserved in all generated code:
 
 ## Commit Messages
 
+For commit message details and examples, consult:
+
+- `COMMIT_CONVENTIONS.md` (canonical, English)
+- `COMMIT_CONVENTIONS.cs.md` (Czech reference)
+
+If there is any conflict between these files and this document, follow `AGENTS.md`.
+
 Use **Conventional Commits** with one of these prefixes (choose the best match):
 
 - `feat:` new feature
