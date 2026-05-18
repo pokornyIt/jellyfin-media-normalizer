@@ -11,6 +11,7 @@ from jellyfin_media_normalizer.models.media_item import MediaItem
 from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
 from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 from jellyfin_media_normalizer.reporters.json_reporter import JsonReporter
+from jellyfin_media_normalizer.reporters.review_html_reporter import ReviewHtmlReporter
 from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
 from jellyfin_media_normalizer.reporters.unresolved_html_reporter import UnresolvedHtmlReporter
 from jellyfin_media_normalizer.reporters.unresolved_reporter import UnresolvedReporter
@@ -94,6 +95,7 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     scan_service: ScanService = ScanService(settings=settings)
     parse_service: ParseService = ParseService(settings=settings)
     reporter: ReviewReporter = ReviewReporter()
+    review_html_reporter: ReviewHtmlReporter = ReviewHtmlReporter()
     unresolved_reporter: UnresolvedReporter = UnresolvedReporter()
     unresolved_html_reporter: UnresolvedHtmlReporter = UnresolvedHtmlReporter()
 
@@ -146,6 +148,10 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     report_path: Path = output_path or (settings.reports_path / "parse-review-report.json")
     written_path: Path = reporter.write(parsed_items, report_path)
     click.echo(f"Review report written to: {written_path}")
+
+    review_html_path: Path = settings.reports_path / "parse-review-report.html"
+    written_review_html_path: Path = review_html_reporter.write(parsed_items, review_html_path)
+    click.echo(f"Review HTML report written to: {written_review_html_path}")
 
     unresolved_path: Path = settings.reports_path / "unresolved-provider-report.json"
     written_unresolved_path: Path = unresolved_reporter.write(parsed_items, unresolved_path)

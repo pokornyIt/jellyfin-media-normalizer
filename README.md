@@ -38,8 +38,9 @@ The `parse` command:
 4. Looks up provider IDs (TMDb, TVDB) — first checks embedded IDs in folder names, then the local cache,
    then online APIs
 5. Writes `data/workspace/reports/parse-review-report.json`
-6. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
-7. Writes `data/workspace/reports/unresolved-provider-report.html` for human-friendly triage
+6. Writes `data/workspace/reports/parse-review-report.html` for human-friendly review triage
+7. Writes `data/workspace/reports/unresolved-provider-report.json` for items without a resolved ID
+8. Writes `data/workspace/reports/unresolved-provider-report.html` for human-friendly unresolved triage
 
 ## Configuration
 
@@ -153,6 +154,7 @@ Parsed 13342 media files.
 Validation summary: passed=13127, review_needed=215, failed=0
 Provider lookup summary: resolved=12697 (cache=12695, online=0, embedded=2), unresolved=430
 Review report written to: data/workspace/reports/parse-review-report.json
+Review HTML report written to: data/workspace/reports/parse-review-report.html
 Unresolved provider report written to: data/workspace/reports/unresolved-provider-report.json
 Unresolved HTML report written to: data/workspace/reports/unresolved-provider-report.html
 ```
