@@ -1,25 +1,34 @@
 # Development Plan
 
-This document tracks the next implementation steps for jellyfin-media-normalizer.
+This document tracks implementation status and next steps for jellyfin-media-normalizer.
 
-It is intended to be updated during normal development and used as the execution
-checklist for upcoming phases.
+It should be updated continuously and used as the practical execution checklist for upcoming phases.
 
-## Current State Snapshot
+## Current State Snapshot (2026-07-19)
 
-Implemented and stable:
+Verified as implemented and stable:
 
 - Scan pipeline (filesystem inventory).
-- Parse and classify pipeline (movies and TV patterns).
-- Validation pipeline and confidence scoring.
-- Provider lookup and cache integration.
-- JSON and review-focused reporting.
-- Dry-run default in runtime settings.
+- Parse and classification pipeline (movies, TV episodes, unknown).
+- Validation pipeline (structure, consistency, confidence scoring).
+- Provider lookup (embedded ID -> cache -> online resolver chain).
+- Reporting: JSON review report, unresolved JSON report, review HTML report, unresolved HTML report.
+- Runtime safety defaults, including dry-run default setting.
+- Local quality gates: ruff, pyright, pytest, pre-commit hooks.
 
-Main gap:
+Verified quality status:
 
-- Rename planning and execution phases are not yet fully implemented
-  as first-class layers.
+- `uv run pytest -q`: 466 passed.
+- `uv run ruff check src tests`: passed.
+- `uv run pyright`: 0 errors.
+
+Main missing product capability:
+
+- Rename planning and rename execution are not implemented as first-class layers yet.
+
+Scale and usability risk to address next:
+
+- Pure CLI + manual file edits will not scale well for large batches (hundreds to thousands of affected files).
 
 ## Non-Negotiable Constraints
 
@@ -31,11 +40,60 @@ All development tasks must preserve these rules:
 - Never bulk rename without a generated manifest.
 - Dry-run must remain the default execution mode.
 
+## Phase Status
+
+| Phase | Area | Status |
+| --- | --- | --- |
+| 1 | Inventory and scan | Done |
+| 2 | Classification | Done |
+| 3 | Name normalization | Done |
+| 4 | Validation | Done |
+| 5 | Provider ID lookup | Done |
+| 6 | Rename planning (manifest generation) | Not started |
+| 7 | Batch rename execution | Not started |
+| 8 | Review workflow exports | Partial (HTML done, CSV missing) |
+
+## UX/Product Direction for Large Libraries
+
+Decision to implement:
+
+- Keep CLI as the source of truth for automation and batch operations.
+- Add a lightweight web application layer (FastAPI + server-rendered HTML) for high-volume review and approvals.
+
+Rationale:
+
+- The current approach is operationally strong but inefficient for triaging thousands of ambiguous entries.
+- A web UI can provide filtering, bulk approve/reject actions, and safer human-in-the-loop workflow.
+
+Architecture constraints for UI:
+
+- UI must not bypass planner/executor safety gates.
+- UI actions must write to manifest/review state, then trigger the same validated execution pipeline as CLI.
+- Dry-run remains default for any execution action started from UI.
+- UI must preserve one-provider-ID-per-movie-or-series rule and no `.nfo` rule.
+
 ## Execution Backlog
 
 ## P0 - Critical Path (Release Blocking)
 
-### 1. Implement planners layer
+### 1. Add rename models (foundation)
+
+Goal:
+
+- Introduce shared data contracts for planning and execution.
+
+Deliverables:
+
+- `RenameEntry` model.
+- `RenameManifest` model.
+- Stable schema fields: source path, target path, reason, confidence, provider linkage, batch metadata.
+
+Acceptance criteria:
+
+- Models are fully typed and validated.
+- Models are reused by planners, executors, and reporting/summary outputs.
+
+### 2. Implement planners layer
 
 Goal:
 
@@ -44,16 +102,16 @@ Goal:
 Deliverables:
 
 - planners module with manifest builder service.
-- Manifest schema and serialization to workspace/manifests.
-- Validation gate before any manifest is marked executable.
+- Manifest schema serialization to `data/workspace/manifests`.
+- Validation gate before a manifest can be marked executable.
 
 Acceptance criteria:
 
-- Planner takes parsed and validated media items as input.
+- Planner accepts parsed and validated media items as input.
 - Planner output is deterministic and fully serializable.
 - Planner rejects invalid, ambiguous, or unresolved entries.
 
-### 2. Implement executors layer
+### 3. Implement executors layer
 
 Goal:
 
@@ -64,6 +122,7 @@ Deliverables:
 - Dry-run executor (default behavior).
 - Explicit opt-in mode for real filesystem changes.
 - Batch rollback log for each attempted operation.
+- Collision and destination-exists checks.
 
 Acceptance criteria:
 
@@ -71,7 +130,7 @@ Acceptance criteria:
 - Dry-run performs no filesystem mutations.
 - Errors are logged with enough context for replay or manual rollback.
 
-### 3. Add CLI commands for rename workflow
+### 4. Add CLI commands for rename workflow
 
 Goal:
 
@@ -79,35 +138,35 @@ Goal:
 
 Deliverables:
 
-- plan-rename command.
-- execute-rename command.
-- Optional validate-manifest command.
+- `plan-rename` command.
+- `execute-rename` command.
+- Optional `validate-manifest` command.
 
 Acceptance criteria:
 
-- execute-rename fails fast when manifest is missing or invalid.
+- `execute-rename` fails fast when manifest is missing or invalid.
 - Real execution requires explicit flag and cannot happen by default.
 - Commands produce clear user-facing summaries and output paths.
 
-## P1 - Important Follow-Up
-
-### 4. Add rename models
+### 5. Define CLI + UI architecture contract (ADR)
 
 Goal:
 
-- Introduce shared data contracts for planning and execution.
+- Lock down integration boundaries before implementing the web layer.
 
 Deliverables:
 
-- RenameEntry model.
-- RenameManifest model.
-- Stable schema fields for source path, target path, reason, confidence,
-  and provider linkage.
+- Architecture decision record describing CLI responsibilities vs UI responsibilities.
+- Clear service-level interfaces reusable by both CLI and web app.
+- Security model for local deployment (auth mode, CSRF policy, trusted network assumptions).
 
 Acceptance criteria:
 
-- Models are fully typed and validated.
-- Models are reused across planners, executors, and reporters.
+- No duplicated business logic between CLI and UI entrypoints.
+- Planner/executor remain single source of truth for mutations.
+- Threat model and operational assumptions are explicitly documented.
+
+## P1 - Important Follow-Up
 
 ### 5. Complete report exports
 
@@ -117,33 +176,71 @@ Goal:
 
 Deliverables:
 
-- CSV reporter.
-- HTML reporter.
+- CSV reporter for review and unresolved datasets.
+- Optional manifest execution summary report format (JSON first, CSV optional).
 
 Acceptance criteria:
 
 - Export commands produce valid files for the same source dataset.
 - Output clearly marks unresolved and manual-review entries.
 
-### 6. Strengthen local quality gates
+### 6. Improve operational logging for long runs
 
 Goal:
 
-- Enforce consistent quality checks before commits.
+- Strengthen observability for large-library execution.
 
 Deliverables:
 
-- .pre-commit-config.yaml with ruff, pyright, and pytest hooks.
-- Coverage policy in pytest configuration.
+- Structured per-command start/finish log events with elapsed time.
+- Per-run correlation ID added to log context.
+- Optional file log sink in `data/workspace/logs` (alongside stdout).
 
 Acceptance criteria:
 
-- Pre-commit checks pass on staged files.
-- CI and local checks use the same baseline quality rules.
+- Long runs are traceable end-to-end from one run identifier.
+- Operators can inspect logs after command completion without terminal history.
+
+### 7. CLI user-friendliness improvements
+
+Goal:
+
+- Improve command ergonomics and feedback quality.
+
+Deliverables:
+
+- Consistent help text with practical examples for key commands.
+- Exit-code policy documentation (success, validation warning mode, fatal failure).
+- Optional `--no-html`/`--no-json` report switches for parse workflow.
+
+Acceptance criteria:
+
+- Typical operator flow is understandable from `--help` output only.
+- Report generation behavior is explicit and configurable.
+
+### 8. Implement review and approval web UI (FastAPI + HTML)
+
+Goal:
+
+- Enable scalable manual triage and approval for high-volume rename decisions.
+
+Deliverables:
+
+- FastAPI app with pages for review-needed and unresolved items.
+- Search, filtering, sorting, and pagination for large datasets.
+- Bulk actions: approve, reject, defer, add note/reason.
+- Manifest preview view (before/after paths, provider ID, confidence, risk flags).
+- Trigger endpoints for planner run and executor dry-run.
+
+Acceptance criteria:
+
+- Operator can process large review sets significantly faster than file-by-file edits.
+- Every action is auditable and persisted (who/when/what changed).
+- UI never executes real rename without explicit confirmation and safety checks.
 
 ## P2 - Maintenance and Consistency
 
-### 7. Align test structure naming
+### 9. Align test structure naming
 
 Goal:
 
@@ -151,7 +248,7 @@ Goal:
 
 Deliverables:
 
-- Align tests/parses with src/parsers naming.
+- Align `tests/parses` with `src/parsers` naming.
 - Keep imports and test discovery stable.
 
 Acceptance criteria:
@@ -159,42 +256,65 @@ Acceptance criteria:
 - Test paths and source paths map cleanly.
 - No test collection regressions.
 
-### 8. Tighten type-checking policy
+### 10. Tighten type-checking policy incrementally
 
 Goal:
 
-- Improve pyright strictness where safe for incremental adoption.
+- Improve pyright strictness where safe.
 
 Deliverables:
 
-- Review and adjust pyright unknown-type reporting settings.
-- Add targeted type annotations in weak areas.
+- Revisit unknown-type reporting settings for new modules first (planners/executors).
+- Add targeted annotations in weaker areas identified during implementation.
 
 Acceptance criteria:
 
-- New critical modules ship with strong type coverage.
-- Type errors are actionable and not noisy.
+- New critical modules ship with stronger type coverage.
+- Type errors remain actionable and low-noise.
+
+### 11. Documentation completeness for operators
+
+Goal:
+
+- Ensure docs match real workflow and reduce onboarding friction.
+
+Deliverables:
+
+- Add rename workflow docs after phases 6 and 7 are implemented.
+- Add troubleshooting section for provider keys, cache behavior, and unresolved matches.
+- Add sample end-to-end command sequence (scan -> parse -> plan -> execute dry-run).
+- Add web UI operator guide: run locally, review workflow, and safety model.
+
+Acceptance criteria:
+
+- New operator can run full safe workflow from docs without guessing.
+- Documentation is consistent with current CLI and report outputs.
 
 ## Recommended Implementation Order
 
-1. Planner models and schema.
+1. Rename models and schema.
 2. Planner service and manifest generation.
 3. Executor service with default dry-run.
 4. CLI integration for plan and execute commands.
-5. Planner and executor test suite.
-6. Reporting extensions (CSV and HTML).
-7. Quality-gate hardening and cleanup tasks.
+5. CLI + UI architecture ADR.
+6. Planner and executor test suite.
+7. CSV reporting extensions.
+8. Logging and CLI UX improvements.
+9. FastAPI + HTML review UI.
+10. Final documentation pass for rename workflow and UI operations.
 
-## Test Strategy for New Phases
+## Test Strategy for Remaining Phases
 
 Required tests for planner and executor features:
 
 - Valid manifest generation from clean parsed inputs.
 - Manifest rejection for unresolved or conflicting entries.
-- execute-rename dry-run confirms zero filesystem mutations.
-- execute-rename hard-fails without explicit execution flag.
+- `execute-rename` dry-run confirms zero filesystem mutations.
+- `execute-rename` hard-fails without explicit execution flag.
 - Batch failure logging and rollback log integrity.
 - End-to-end CLI flow on fixture library data.
+- UI integration tests for approval actions and manifest state transitions.
+- UI-to-executor dry-run flow tests (no filesystem mutations).
 
 ## Definition of Done for Rename Workflow
 
