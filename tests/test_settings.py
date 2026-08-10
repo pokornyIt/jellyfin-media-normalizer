@@ -175,9 +175,7 @@ class TestSettingsFromEnv:
         settings: Settings = Settings.from_env()
         assert settings.dry_run is expected
 
-    def test_workspace_derived_paths_use_custom_workspace(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_workspace_derived_paths_use_custom_workspace(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Derive sub-paths from ``JMN_WORKSPACE_PATH`` when no overrides are set.
 
         :param monkeypatch: pytest fixture for environment patching.
@@ -193,9 +191,7 @@ class TestSettingsFromEnv:
         assert settings.manifests_path == Path("/data/ws/manifests")
         assert settings.logs_path == Path("/data/ws/logs")
 
-    def test_sub_paths_can_be_overridden_independently(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_sub_paths_can_be_overridden_independently(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Allow each sub-path to be set independently of workspace path.
 
         :param monkeypatch: pytest fixture for environment patching.

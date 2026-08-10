@@ -71,9 +71,7 @@ class JsonFormatter(logging.Formatter):
             payload["exc_type"] = record.exc_info[0].__name__  # type: ignore[union-attr]
             payload["exc"] = self.formatException(record.exc_info)
 
-        cleaned_payload: dict[str, Any] = {
-            key: value for key, value in payload.items() if value is not None
-        }
+        cleaned_payload: dict[str, Any] = {key: value for key, value in payload.items() if value is not None}
         return json.dumps(cleaned_payload, ensure_ascii=False)
 
 

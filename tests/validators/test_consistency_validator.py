@@ -44,9 +44,7 @@ class TestConsistencyValidator:
         assert result.status == ValidationStatus.PASSED
         assert result.confidence == ConfidenceLevel.HIGH
 
-    def test_consistent_series(
-        self, validator: ConsistencyValidator, base_episode: ParsedMediaItem
-    ) -> None:
+    def test_consistent_series(self, validator: ConsistencyValidator, base_episode: ParsedMediaItem) -> None:
         """Test validation of consistent series episodes."""
         ep1: ParsedMediaItem = base_episode
         ep2 = ParsedMediaItem(
@@ -66,9 +64,7 @@ class TestConsistencyValidator:
         assert result.is_valid is True
         assert result.status == ValidationStatus.PASSED
 
-    def test_inconsistent_series_titles(
-        self, validator: ConsistencyValidator, base_episode: ParsedMediaItem
-    ) -> None:
+    def test_inconsistent_series_titles(self, validator: ConsistencyValidator, base_episode: ParsedMediaItem) -> None:
         """Test validation with inconsistent series titles."""
         ep1: ParsedMediaItem = base_episode
         ep2 = ParsedMediaItem(
@@ -89,9 +85,7 @@ class TestConsistencyValidator:
         assert result.status == ValidationStatus.FAILED
         assert any("inconsistent" in i.lower() for i in result.issues)
 
-    def test_duplicate_season_episode(
-        self, validator: ConsistencyValidator, base_episode: ParsedMediaItem
-    ) -> None:
+    def test_duplicate_season_episode(self, validator: ConsistencyValidator, base_episode: ParsedMediaItem) -> None:
         """Test validation with duplicate season/episode combination."""
         ep1: ParsedMediaItem = base_episode
         ep2 = ParsedMediaItem(
@@ -112,9 +106,7 @@ class TestConsistencyValidator:
         assert result.status == ValidationStatus.REVIEW_NEEDED
         assert any("duplicate" in w.lower() for w in result.warnings)
 
-    def test_non_episode_in_series(
-        self, validator: ConsistencyValidator, base_episode: ParsedMediaItem
-    ) -> None:
+    def test_non_episode_in_series(self, validator: ConsistencyValidator, base_episode: ParsedMediaItem) -> None:
         """Test validation with non-episode item in series."""
         ep1: ParsedMediaItem = base_episode
         movie = ParsedMediaItem(

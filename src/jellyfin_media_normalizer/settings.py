@@ -61,9 +61,7 @@ class Settings:
             dry_run=_parse_bool(os.getenv("JMN_DRY_RUN", "true")),
             tmdb_api_key=_optional_env("JMN_TMDB_API_KEY"),
             tvdb_api_key=_optional_env("JMN_TVDB_API_KEY"),
-            provider_lookup_progress_interval=int(
-                os.getenv("JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL", "100")
-            ),
+            provider_lookup_progress_interval=int(os.getenv("JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL", "100")),
         )
 
     def ensure_directories(self) -> None:

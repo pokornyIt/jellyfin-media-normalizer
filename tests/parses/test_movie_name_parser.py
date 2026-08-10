@@ -116,9 +116,7 @@ class TestMovieNameParser:
         :param normalized_name: Cleaned movie name.
         :param expected_confidence: Expected confidence score.
         """
-        parsed: ParsedName = MovieNameParser().parse(
-            raw_name="x.mkv", normalized_name=normalized_name
-        )
+        parsed: ParsedName = MovieNameParser().parse(raw_name="x.mkv", normalized_name=normalized_name)
         assert parsed.confidence == pytest.approx(expected_confidence)
 
     @pytest.mark.parametrize(

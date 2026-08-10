@@ -25,9 +25,7 @@ class ValidationService(LoggingMixin):
         :param media_items: A list of ParsedMediaItem objects to be validated.
         :return: A list of validated ParsedMediaItem objects with validation results.
         """
-        self.log.info(
-            "Running validation service", extra={"extra": {"item_count": len(media_items)}}
-        )
+        self.log.info("Running validation service", extra={"extra": {"item_count": len(media_items)}})
 
         validated_items: list[ParsedMediaItem] = []
         for item in media_items:
@@ -49,18 +47,12 @@ class ValidationService(LoggingMixin):
             extra={
                 "extra": {
                     "item_count": len(validated_items),
-                    "passed": sum(
-                        1 for i in validated_items if i.validation_status == ValidationStatus.PASSED
-                    ),
+                    "passed": sum(1 for i in validated_items if i.validation_status == ValidationStatus.PASSED),
                     "review_needed": sum(
-                        1
-                        for i in validated_items
-                        if i.validation_status == ValidationStatus.REVIEW_NEEDED
+                        1 for i in validated_items if i.validation_status == ValidationStatus.REVIEW_NEEDED
                     ),
                     "failed": sum(
-                        1
-                        for i in validated_items
-                        if i.validation_result and not i.validation_result.is_valid
+                        1 for i in validated_items if i.validation_result and not i.validation_result.is_valid
                     ),
                 }
             },

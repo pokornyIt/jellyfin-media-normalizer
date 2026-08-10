@@ -122,9 +122,7 @@ class ProviderIdCacheResolver(LoggingMixin):
             return self._cache_entries
 
         raw_payload: Any = json.loads(self.cache_file_path.read_text(encoding="utf-8"))
-        cache_node: Any = (
-            raw_payload.get("entries", raw_payload) if isinstance(raw_payload, dict) else {}
-        )
+        cache_node: Any = raw_payload.get("entries", raw_payload) if isinstance(raw_payload, dict) else {}
 
         entries: dict[str, ProviderMatch] = {}
         if not isinstance(cache_node, dict):
@@ -141,9 +139,7 @@ class ProviderIdCacheResolver(LoggingMixin):
                 continue
 
             confidence_value: Any = value.get("confidence", 1.0)
-            confidence: float = (
-                float(confidence_value) if isinstance(confidence_value, int | float) else 1.0
-            )
+            confidence: float = float(confidence_value) if isinstance(confidence_value, int | float) else 1.0
 
             reason_value: Any = value.get("reason", "cache_entry")
             reason: str = reason_value if isinstance(reason_value, str) else "cache_entry"

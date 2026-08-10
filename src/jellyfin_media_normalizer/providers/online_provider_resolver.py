@@ -108,9 +108,7 @@ class OnlineProviderResolver(LoggingMixin):
         for client in self.movie_clients:
             self.log.debug(
                 "Trying movie client",
-                extra={
-                    "extra": {"client": client.__class__.__name__, "title": item.normalized_title}
-                },
+                extra={"extra": {"client": client.__class__.__name__, "title": item.normalized_title}},
             )
             match: ProviderMatch | None = client.search_movie(
                 title=item.normalized_title,
@@ -128,9 +126,7 @@ class OnlineProviderResolver(LoggingMixin):
                 )
                 continue
 
-            persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(
-                lookup_key, match
-            )
+            persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(lookup_key, match)
             self.log.debug(
                 "Movie provider ID cached",
                 extra={
@@ -168,9 +164,7 @@ class OnlineProviderResolver(LoggingMixin):
         for client in self.tv_series_clients:
             self.log.debug(
                 "Trying TV series client",
-                extra={
-                    "extra": {"client": client.__class__.__name__, "title": item.normalized_title}
-                },
+                extra={"extra": {"client": client.__class__.__name__, "title": item.normalized_title}},
             )
             match: ProviderMatch | None = client.search_tv_series(title=item.normalized_title)
             if match is None:
@@ -185,9 +179,7 @@ class OnlineProviderResolver(LoggingMixin):
                 )
                 continue
 
-            persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(
-                lookup_key, match
-            )
+            persisted_match: ProviderMatch = self.cache_resolver.store_lookup_result(lookup_key, match)
             self.log.debug(
                 "TV series provider ID cached",
                 extra={

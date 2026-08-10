@@ -45,9 +45,7 @@ class TestStructureValidator:
         assert len(result.issues) == 0
         assert len(result.warnings) == 0
 
-    def test_movie_without_year(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_movie_without_year(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of movie without year."""
         base_item.year = None
         result: ValidationResult = validator.validate(base_item)
@@ -57,9 +55,7 @@ class TestStructureValidator:
         assert len(result.warnings) == 1
         assert "no year" in result.warnings[0].lower()
 
-    def test_movie_invalid_year(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_movie_invalid_year(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of movie with invalid year."""
         base_item.year = 5000
         result: ValidationResult = validator.validate(base_item)
@@ -77,18 +73,14 @@ class TestStructureValidator:
         assert result.status == ValidationStatus.FAILED
         assert "title" in result.issues[0].lower()
 
-    def test_empty_normalized_title(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_empty_normalized_title(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation with empty normalized title."""
         base_item.normalized_title = ""
         result: ValidationResult = validator.validate(base_item)
         assert result.is_valid is False
         assert result.status == ValidationStatus.FAILED
 
-    def test_valid_tv_episode(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_valid_tv_episode(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of a valid TV episode."""
         base_item.media_type = "tv_episode"
         base_item.season = 1
@@ -97,9 +89,7 @@ class TestStructureValidator:
         assert result.is_valid is True
         assert result.status == ValidationStatus.PASSED
 
-    def test_tv_episode_missing_season(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_tv_episode_missing_season(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of TV episode without season."""
         base_item.media_type = "tv_episode"
         base_item.season = None
@@ -108,9 +98,7 @@ class TestStructureValidator:
         assert result.is_valid is False
         assert "season" in result.issues[0].lower()
 
-    def test_tv_episode_missing_episode(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_tv_episode_missing_episode(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of TV episode without episode number."""
         base_item.media_type = "tv_episode"
         base_item.season = 1
@@ -119,9 +107,7 @@ class TestStructureValidator:
         assert result.is_valid is False
         assert "episode" in result.issues[0].lower()
 
-    def test_invalid_season_negative(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_invalid_season_negative(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation with negative season number."""
         base_item.media_type = "tv_episode"
         base_item.season = -1
@@ -130,9 +116,7 @@ class TestStructureValidator:
         assert result.is_valid is False
         assert "season" in result.issues[0].lower()
 
-    def test_invalid_episode_negative(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_invalid_episode_negative(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation with negative episode number."""
         base_item.media_type = "tv_episode"
         base_item.season = 1
@@ -141,27 +125,21 @@ class TestStructureValidator:
         assert result.is_valid is False
         assert "episode" in result.issues[0].lower()
 
-    def test_invalid_language_code_length(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_invalid_language_code_length(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation with invalid language code length."""
         base_item.language = "CZE"
         result: ValidationResult = validator.validate(base_item)
         assert result.is_valid is False
         assert "language" in result.issues[0].lower()
 
-    def test_valid_language_code(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_valid_language_code(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation with valid language code."""
         base_item.language = "CZ"
         result: ValidationResult = validator.validate(base_item)
         assert result.is_valid is True
         assert result.status == ValidationStatus.PASSED
 
-    def test_unknown_media_type(
-        self, validator: StructureValidator, base_item: ParsedMediaItem
-    ) -> None:
+    def test_unknown_media_type(self, validator: StructureValidator, base_item: ParsedMediaItem) -> None:
         """Test validation of unknown media type marks item for review."""
         base_item.media_type = "unknown"
         result: ValidationResult = validator.validate(base_item)

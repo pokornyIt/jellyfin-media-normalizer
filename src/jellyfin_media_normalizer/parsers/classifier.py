@@ -12,12 +12,8 @@ class Classifier:
     """Classify media filenames."""
 
     _TV_PATTERN: re.Pattern[str] = re.compile(r"\bS(\d{2})E(\d{1,2})\b", re.IGNORECASE)
-    _TV_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
-        r"\bS(\d{2})[ -]?E(\d{1,2})\b", re.IGNORECASE
-    )
-    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(
-        r"(?:^|[\s-])\d{1,2}x\d{1,2}(?=\s|-|$)", re.IGNORECASE
-    )
+    _TV_PATTERN_SEPARATED: re.Pattern[str] = re.compile(r"\bS(\d{2})[ -]?E(\d{1,2})\b", re.IGNORECASE)
+    _TV_HYPHEN_PATTERN: re.Pattern[str] = re.compile(r"(?:^|[\s-])\d{1,2}x\d{1,2}(?=\s|-|$)", re.IGNORECASE)
     _TV_HYPHEN_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
         r"(?:^|[\s-])\d{1,2}[-_x]\d{1,2}(?=\s|-|$)", re.IGNORECASE
     )

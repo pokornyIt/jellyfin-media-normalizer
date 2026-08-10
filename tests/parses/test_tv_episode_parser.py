@@ -122,9 +122,7 @@ class TestTvEpisodeParser:
 
         :param normalized_name: Cleaned filename without strict TV marker.
         """
-        parsed: ParsedName = TvEpisodeParser().parse(
-            raw_name="x.mkv", normalized_name=normalized_name
-        )
+        parsed: ParsedName = TvEpisodeParser().parse(raw_name="x.mkv", normalized_name=normalized_name)
         assert parsed.media_type is MediaType.UNKNOWN
         assert parsed.title is None
         assert parsed.confidence == pytest.approx(0.0)
@@ -142,9 +140,7 @@ class TestTvEpisodeParser:
         :param normalized_name: Cleaned TV name.
         :param expected_confidence: Expected confidence score.
         """
-        parsed: ParsedName = TvEpisodeParser().parse(
-            raw_name="x.mkv", normalized_name=normalized_name
-        )
+        parsed: ParsedName = TvEpisodeParser().parse(raw_name="x.mkv", normalized_name=normalized_name)
         assert parsed.confidence == pytest.approx(expected_confidence)
 
     @pytest.mark.parametrize(

@@ -84,17 +84,13 @@ class ProviderLookupService(LoggingMixin):
 
                 match: ProviderMatch | None = self.resolver.resolve(item)
                 if match is None:
-                    _append_issue(
-                        item, "Provider ID not found in provider cache or online providers."
-                    )
+                    _append_issue(item, "Provider ID not found in provider cache or online providers.")
                 else:
                     item.provider_match = match
                     resolved_count += 1
                     if match.reason.startswith("cache_exact_key:"):
                         cache_count += 1
-                    elif match.reason.startswith("tmdb_search_") or match.reason.startswith(
-                        "tvdb_search_"
-                    ):
+                    elif match.reason.startswith("tmdb_search_") or match.reason.startswith("tvdb_search_"):
                         online_count += 1
 
             if processed % self.progress_interval == 0:

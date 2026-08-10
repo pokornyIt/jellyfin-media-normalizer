@@ -62,9 +62,7 @@ def _make_item(
     item.validation_result = ValidationResult(
         is_valid=validation_status != ValidationStatus.FAILED,
         status=validation_status,
-        confidence=ConfidenceLevel.HIGH
-        if validation_status == ValidationStatus.PASSED
-        else ConfidenceLevel.MEDIUM,
+        confidence=ConfidenceLevel.HIGH if validation_status == ValidationStatus.PASSED else ConfidenceLevel.MEDIUM,
         issues=issues or [],
         warnings=warnings or [],
     )
@@ -120,9 +118,7 @@ class TestReviewReporter:
         assert "items" in data
         assert "generated_at" in data
 
-    def test_only_review_and_failed_items_included(
-        self, reporter: ReviewReporter, tmp_path: Path
-    ) -> None:
+    def test_only_review_and_failed_items_included(self, reporter: ReviewReporter, tmp_path: Path) -> None:
         """Test that only review_needed and failed items appear in the report.
 
         :param reporter: ReviewReporter fixture.
@@ -150,9 +146,7 @@ class TestReviewReporter:
         assert "Failed Movie" in titles
         assert "Passed Movie" not in titles
 
-    def test_empty_input_writes_empty_report(
-        self, reporter: ReviewReporter, tmp_path: Path
-    ) -> None:
+    def test_empty_input_writes_empty_report(self, reporter: ReviewReporter, tmp_path: Path) -> None:
         """Test that empty input produces an empty items list.
 
         :param reporter: ReviewReporter fixture.

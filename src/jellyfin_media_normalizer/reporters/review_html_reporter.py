@@ -351,9 +351,7 @@ class ReviewHtmlReporter(LoggingMixin):
         rows: list[dict[str, str]] = [self._build_row(item) for item in review_items]
 
         media_type_counter: Counter[str] = Counter(item.media_type for item in review_items)
-        status_counter: Counter[str] = Counter(
-            item.validation_status.value for item in review_items
-        )
+        status_counter: Counter[str] = Counter(item.validation_status.value for item in review_items)
 
         payload: dict[str, Any] = {
             "generated_at": datetime.now(UTC).isoformat(),
@@ -428,9 +426,7 @@ class ReviewHtmlReporter(LoggingMixin):
             else:
                 search_query = title_encoded.replace(" ", "+")
                 tmdb_search = f"https://www.themoviedb.org/search/movie?query={search_query}"
-                links.append(
-                    f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>'
-                )
+                links.append(f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>')
 
             # TVDB movie link (search only)
             search_query = title_encoded.replace(" ", "+")
@@ -446,9 +442,7 @@ class ReviewHtmlReporter(LoggingMixin):
             else:
                 search_query = series_title_encoded.replace(" ", "+")
                 tmdb_search = f"https://www.themoviedb.org/search/tv?query={search_query}"
-                links.append(
-                    f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>'
-                )
+                links.append(f'<a href="{tmdb_search}" target="_blank" rel="noopener">TMDb Search</a>')
 
             # TVDB TV search
             search_query = series_title_encoded.replace(" ", "+")

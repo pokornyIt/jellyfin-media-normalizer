@@ -18,9 +18,7 @@ from jellyfin_media_normalizer.parsers.patterns import (
 class TvEpisodeParser:
     """Parse normalized TV episode filenames."""
 
-    _TV_PATTERN: re.Pattern[str] = re.compile(
-        r"\bS(?P<season>\d{2})E(?P<episode>\d{1,2})\b", re.IGNORECASE
-    )
+    _TV_PATTERN: re.Pattern[str] = re.compile(r"\bS(?P<season>\d{2})E(?P<episode>\d{1,2})\b", re.IGNORECASE)
     _TV_PATTERN_SEPARATED: re.Pattern[str] = re.compile(
         r"\bS(?P<season>\d{2})[ -]?E(?P<episode>\d{1,2})\b", re.IGNORECASE
     )

@@ -144,9 +144,7 @@ class TestScanResultCreation:
         :param relative_path: Relative path string.
         :param extension: File extension string.
         """
-        item: MediaItem = _make_media_item(
-            path=path, relative_path=relative_path, extension=extension
-        )
+        item: MediaItem = _make_media_item(path=path, relative_path=relative_path, extension=extension)
         result = ScanResult(media_item=item, parsed_name=_make_parsed_name())
 
         assert result.media_item.path == Path(path)
@@ -161,9 +159,7 @@ class TestScanResultEquality:
         """Two ScanResult instances with identical contents must be equal."""
         item: MediaItem = _make_media_item()
         pn: ParsedName = _make_parsed_name()
-        assert ScanResult(media_item=item, parsed_name=pn) == ScanResult(
-            media_item=item, parsed_name=pn
-        )
+        assert ScanResult(media_item=item, parsed_name=pn) == ScanResult(media_item=item, parsed_name=pn)
 
     def test_different_media_item_breaks_equality(self) -> None:
         """ScanResult instances with different MediaItems must not be equal."""

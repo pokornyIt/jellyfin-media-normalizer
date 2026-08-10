@@ -325,9 +325,7 @@ class UnresolvedHtmlReporter(LoggingMixin):
             "summary": {
                 "total_unresolved": len(unresolved_items),
                 "movies": sum(1 for item in unresolved_items if item.media_type == "movie"),
-                "tv_episodes": sum(
-                    1 for item in unresolved_items if item.media_type == "tv_episode"
-                ),
+                "tv_episodes": sum(1 for item in unresolved_items if item.media_type == "tv_episode"),
             },
             "rows": rows,
         }

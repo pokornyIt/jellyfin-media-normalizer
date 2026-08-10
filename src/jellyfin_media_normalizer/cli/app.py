@@ -104,21 +104,15 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
 
     click.echo(f"Parsed {len(parsed_items)} media files.")
     passed_count: int = sum(1 for item in parsed_items if item.validation_status.value == "passed")
-    review_count: int = sum(
-        1 for item in parsed_items if item.validation_status.value == "review_needed"
-    )
+    review_count: int = sum(1 for item in parsed_items if item.validation_status.value == "review_needed")
     failed_count: int = sum(1 for item in parsed_items if item.validation_status.value == "failed")
-    click.echo(
-        "Validation summary: "
-        f"passed={passed_count}, review_needed={review_count}, failed={failed_count}"
-    )
+    click.echo(f"Validation summary: passed={passed_count}, review_needed={review_count}, failed={failed_count}")
 
     resolved_count: int = sum(1 for item in parsed_items if item.provider_match is not None)
     cache_count: int = sum(
         1
         for item in parsed_items
-        if item.provider_match is not None
-        and item.provider_match.reason.startswith("cache_exact_key:")
+        if item.provider_match is not None and item.provider_match.reason.startswith("cache_exact_key:")
     )
     online_count: int = sum(
         1
@@ -132,8 +126,7 @@ def parse(ctx: click.Context, output_path: Path | None) -> None:
     embedded_count: int = sum(
         1
         for item in parsed_items
-        if item.provider_match is not None
-        and item.provider_match.reason.startswith("source_embedded_id:")
+        if item.provider_match is not None and item.provider_match.reason.startswith("source_embedded_id:")
     )
     unresolved_count: int = sum(
         1 for item in parsed_items if item.provider_match is None and item.media_type != "unknown"

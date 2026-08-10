@@ -54,9 +54,7 @@ class StructureValidator:
             warnings.append("Media type could not be classified")
 
         # Check language code if present
-        if item.language is not None and (
-            not isinstance(item.language, str) or len(item.language) != 2
-        ):
+        if item.language is not None and (not isinstance(item.language, str) or len(item.language) != 2):
             issues.append(f"Invalid language code: {item.language}")
 
         # Determine validation status

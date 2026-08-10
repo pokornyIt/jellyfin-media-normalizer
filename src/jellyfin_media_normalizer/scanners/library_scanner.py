@@ -32,9 +32,7 @@ class LibraryScanner(LoggingMixin):
         if not self.library_path.is_dir():
             raise NotADirectoryError(f"Library path is not a directory: {self.library_path}")
 
-        self.log.info(
-            "Starting library scan", extra={"extra": {"library_path": str(self.library_path)}}
-        )
+        self.log.info("Starting library scan", extra={"extra": {"library_path": str(self.library_path)}})
 
         items: list[MediaItem] = []
         for path in sorted(self.library_path.rglob("*")):

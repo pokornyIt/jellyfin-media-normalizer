@@ -54,9 +54,7 @@ class TmdbClient(LoggingMixin):
 
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
-                response: httpx.Response = client.get(
-                    f"{self.base_url}/search/movie", params=params
-                )
+                response: httpx.Response = client.get(f"{self.base_url}/search/movie", params=params)
                 response.raise_for_status()
                 payload: Any = response.json()
         except httpx.HTTPError as e:
@@ -190,9 +188,7 @@ class TvdbClient(LoggingMixin):
 
         try:
             with httpx.Client(timeout=self.timeout_seconds) as client:
-                response: httpx.Response = client.get(
-                    f"{self.base_url}/search", headers=headers, params=params
-                )
+                response: httpx.Response = client.get(f"{self.base_url}/search", headers=headers, params=params)
                 response.raise_for_status()
                 payload: Any = response.json()
         except httpx.HTTPError as e:

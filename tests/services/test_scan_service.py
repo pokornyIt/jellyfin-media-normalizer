@@ -11,9 +11,7 @@ from jellyfin_media_normalizer.services.scan_service import ScanService
 from jellyfin_media_normalizer.settings import Settings
 
 
-def _make_settings(
-    library_path: Path | None = None, workspace_path: Path | None = None
-) -> Settings:
+def _make_settings(library_path: Path | None = None, workspace_path: Path | None = None) -> Settings:
     """Create test settings.
 
     :param library_path: Optional library path.

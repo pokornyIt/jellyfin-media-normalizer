@@ -32,9 +32,7 @@ class ReviewReporter(LoggingMixin):
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         media_type_counter: Counter[str] = Counter(item.media_type for item in review_items)
-        status_counter: Counter[str] = Counter(
-            item.validation_status.value for item in review_items
-        )
+        status_counter: Counter[str] = Counter(item.validation_status.value for item in review_items)
 
         payload: dict[str, object] = {
             "generated_at": datetime.now(UTC).isoformat(),

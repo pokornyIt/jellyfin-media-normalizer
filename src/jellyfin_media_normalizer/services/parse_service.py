@@ -45,9 +45,7 @@ class ParseService(LoggingMixin):
         self.settings: Settings = settings
         self.parser: MediaItemParserProtocol = parser or MediaParser()
         self.validator: ValidationService = validator or ValidationService()
-        self.provider_lookup: ProviderLookupService = provider_lookup or ProviderLookupService(
-            settings=settings
-        )
+        self.provider_lookup: ProviderLookupService = provider_lookup or ProviderLookupService(settings=settings)
 
     def run(self, media_items: list[MediaItem]) -> list[ParsedMediaItem]:
         """Run the parsing and validation process on a list of media items.
