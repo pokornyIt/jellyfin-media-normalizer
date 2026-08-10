@@ -42,7 +42,7 @@
                 "footeru",
                 "changelogu",
                 "pyrightu",
-                "ticové"
+                "ticové","githubem"
             ],
             "words": [
                 "parsování",
@@ -78,6 +78,7 @@
                 "shellu",
                 "localhostu",
                 "repozitář",
+                "repozitáře",
                 "verzovaná",
                 "verzované",
                 "verzovaným",
@@ -85,7 +86,8 @@
                 "dockeru",
                 "socketu",
                 "fixturech",
-                "videosouborů"
+                "videosouborů",
+                "requestu","requestů","subjectu","commity","dohledatelnost","mergi"
             ]
         }
     ],

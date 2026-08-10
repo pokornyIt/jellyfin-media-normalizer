@@ -122,16 +122,32 @@ chore(deps): bump black from 24.2 to 24.8
 
 ---
 
-## Best Practices
+## Pull Request And Issue Policy
+
+- Every change merged into `main` must use a pull request.
+- Every pull request targeting `main` must link at least one existing open issue from this repository.
+- Put `Closes #123` in the pull request description when the merge completes the issue. GitHub will close the issue
+  after the pull request is merged into the default branch.
+- If the pull request is only partial work, link it manually through GitHub's Development section and use
+  `Related to #123` in the description without a closing keyword.
+- Use plain references such as `#123`; GitHub creates the link automatically. Do not construct a Markdown link around
+  the issue number.
+- Verify that the referenced issue exists and represents the change. Never guess or fabricate an issue number.
+- Pull request titles follow the same English Conventional Commit subject format described in this document.
+- Individual branch commits do not require an issue reference. A commit footer may reference an issue when useful, but
+  the required traceability is maintained by the pull request.
+- With squash merging, the final commit may contain the pull request number added by GitHub. Keep `Closes #123` in the
+  pull request description rather than forcing the issue number into every commit subject.
+
+## Commit Message Best Practices
 
 - Use **imperative mood** and be concise: “add”, “fix”, “remove” — not “added”, “fixed”.
 - Keep the **subject** line to ~72 characters; move details to the body.
 - Use **scope** to narrow context (`feat(auth): ...`, `fix(db): ...`).
 - Always mark breaking changes with `!` or `BREAKING CHANGE:` in the footer.
-- Reference issues in the **footer**:
+- Optionally reference an issue in a commit **footer** when it improves context:
 
 ```text
-Closes #123
 Related to #456
 ```
 

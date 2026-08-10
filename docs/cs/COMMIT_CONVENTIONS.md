@@ -121,16 +121,31 @@ chore(deps): bump black from 24.2 to 24.8
 
 ---
 
-## Doporučení pro praxi
+## Pravidla pro pull requesty a issues
+
+- Každá změna začleněná do `main` musí projít přes pull request.
+- Každý pull request směřující do `main` musí odkazovat alespoň na jedno existující otevřené issue tohoto repozitáře.
+- Pokud merge dokončí issue, uveď v popisu pull requestu `Closes #123`. GitHub po mergi do výchozí větve issue uzavře.
+- Pokud pull request představuje pouze dílčí práci, propoj jej ručně přes sekci Development na GitHubu a v popisu použij
+  `Related to #123` bez uzavíracího klíčového slova.
+- Používej prosté reference jako `#123`; GitHub z nich vytvoří odkaz automaticky. Nevytvářej kolem čísla issue ruční
+  Markdown odkaz.
+- Ověř, že odkazované issue existuje a odpovídá změně. Číslo issue nikdy nehádej ani nevymýšlej.
+- Názvy pull requestů používají stejný anglický formát Conventional Commit subjectu jako tento dokument.
+- Jednotlivé pracovní commity odkaz na issue nevyžadují. Footer commitu může issue uvést, pokud to zlepšuje kontext,
+  ale povinnou dohledatelnost zajišťuje pull request.
+- Při squash mergi může výsledný commit obsahovat číslo pull requestu doplněné GitHubem. `Closes #123` ponech v popisu
+  pull requestu místo vynucování čísla issue v každém commit subjectu.
+
+## Doporučení pro commit zprávy
 
 - Piš v **imperativu** a stručně: „add“, „fix“, „remove“, ne „added“, „fixed“.
 - Udrž **subject** do ~72 znaků; detaily do body.
 - Používej **scope** pro modul/část (`feat(auth): ...`, `fix(db): ...`).
 - Při breaking změně **vždy** použij `!` nebo `BREAKING CHANGE:` ve footeru.
-- Odkazuj issue v **footeru**:
+- Volitelně odkazuj issue ve **footeru** commitu, pokud to zlepšuje kontext:
 
 ```text
-Closes #123
 Related to #456
 ```
 

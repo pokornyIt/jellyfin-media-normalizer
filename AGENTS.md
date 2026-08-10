@@ -121,6 +121,21 @@ Follow the allowed types, format, and examples in:
 - Use English in commit messages.
 - If relevant, include a scope in parentheses, for example: `feat(parser): add movie filename parser`
 
+## Pull Requests And Issue Traceability
+
+- Every change merged into `main` must go through a pull request.
+- Every pull request targeting `main` must link at least one existing open issue in this repository.
+- When merging the pull request will complete an issue, add `Closes #<issue-number>` to the pull request description.
+- For partial work that must not close the issue, link the pull request manually through GitHub's Development section
+  and use `Related to #<issue-number>` in the description for reader context.
+- Use a plain GitHub issue reference such as `#123`; do not wrap it in a manually constructed Markdown link.
+- Verify that every referenced issue exists and matches the change. Never invent or guess an issue number.
+- Pull request titles must follow the same English Conventional Commit subject rules as commit messages.
+- Individual branch commits do not need an issue reference. Do not append an issue number to a generated commit subject
+  unless the user explicitly requests it and the correct issue is known.
+- For squash merges, allow GitHub to append the pull request number to the final commit subject. Keep the issue-closing
+  reference in the pull request description.
+
 ## Python Style Conventions
 
 - Follow **PEP 8** and keep code readable and explicit.
