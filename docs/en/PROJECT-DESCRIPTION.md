@@ -1,5 +1,7 @@
 # PROJECT-DESCRIPTION
 
+[English](PROJECT-DESCRIPTION.md) | [Čeština](../cs/PROJECT-DESCRIPTION.md)
+
 ## Goal
 
 The goal of this project is to consolidate and normalize a large media library stored on
@@ -165,8 +167,8 @@ Items classified as `unknown` are skipped entirely.
 
 ### Implementation Phases
 
-| #   | Phase                                 | Status        |
-| --- | ------------------------------------- | ------------- |
+| #   | Phase                                 | Status         |
+| --- | ------------------------------------- | -------------- |
 | 1   | Inventory and scan                    | ✅ Implemented |
 | 2   | Classification                        | ✅ Implemented |
 | 3   | Name normalization                    | ✅ Implemented |

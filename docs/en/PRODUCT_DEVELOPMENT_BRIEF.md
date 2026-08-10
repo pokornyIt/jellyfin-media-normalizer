@@ -1,5 +1,7 @@
 # Product Development Brief
 
+[English](PRODUCT_DEVELOPMENT_BRIEF.md) | [Čeština](../cs/PRODUCT_DEVELOPMENT_BRIEF.md)
+
 ## Purpose Of This Document
 
 This document defines a coherent product direction for `jellyfin-media-normalizer` before rename planning,
@@ -8,9 +10,9 @@ execution, and an interactive user interface are implemented.
 It is intended to be used as the input for a later documentation realignment. After the decisions in this
 document are accepted, the relevant parts should be reflected in:
 
-- `PROJECT-DESCRIPTION.md` for stable product scope and domain rules;
-- `DEVELOPMENT_PLAN.md` for the implementation backlog and current status;
-- `README.md` for installation and operator workflows;
+- [Project Description](PROJECT-DESCRIPTION.md) for stable product scope and domain rules;
+- [Development Plan](DEVELOPMENT_PLAN.md) for the implementation backlog and current status;
+- [README](../../README.md) for installation and operator workflows;
 - architecture decision records for persistence, UI deployment, and rename safety.
 
 This brief describes the desired product. It does not claim that all described capabilities are already
@@ -355,7 +357,8 @@ automatic rule, or execution event causing a transition must be auditable.
 
 - Accept or amend the decisions in this brief.
 - Resolve the open product decisions listed below.
-- Update `PROJECT-DESCRIPTION.md`, `DEVELOPMENT_PLAN.md`, and `README.md` so their terminology and phase status agree.
+- Update `PROJECT-DESCRIPTION.md`, `DEVELOPMENT_PLAN.md`, `README.md`, and `README.cs.md` so their terminology and
+  phase status agree.
 - Add architecture decisions for persistence, UI deployment, container safety, and manifest execution safety.
 
 ### Stage 1: Correct The Analysis Model
@@ -447,7 +450,7 @@ When this brief is accepted, update the existing documents as follows.
 - Define the operator-ready milestone as the release target.
 - Keep verification results dated and separate from product-completeness claims.
 
-### `README.md`
+### `README.md` and `README.cs.md`
 
 - Clearly label the current release as analysis-only until planning and execution exist.
 - Replace manual `.env` export as the primary user setup once setup support exists.

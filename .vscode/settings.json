@@ -24,17 +24,17 @@
         "editor.defaultFormatter": "charliermarsh.ruff",
         // "editor.wordWrap": "wordWrapColumn",
         "editor.wordWrap": "off",
-        "editor.wordWrapColumn": 100,
+        "editor.wordWrapColumn": 120,
         "editor.formatOnSave": true,
         "editor.rulers": [
-            100
+            120
         ],
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit",
             "source.organizeImports.ruff": "explicit"
         }
     },
-    "ruff.lineLength": 100,
+    "ruff.lineLength": 120,
     "ruff.enable": true,
     "ruff.organizeImports": true,
     "ruff.path": [

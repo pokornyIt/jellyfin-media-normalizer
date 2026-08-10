@@ -1,47 +1,51 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
-      - id: check-yaml
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-        exclude: \.(md)$  # Allow trailing whitespace in markdown files
+        exclude: \.(md)$ # Allow trailing whitespace in markdown files
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: ["--maxkb=5120"]  # 5 MB; adjust as needed
+        args: ["--maxkb=1024"]
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
     hooks:
-      - id: ruff
-        args: ["--fix"]
-      - id: ruff-format
+      - id: yamllint
+        args: ["--config-file", ".yamllint.yml"]
 
-  - repo: local
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.2
     hooks:
-      - id: uv-lock-check
-        name: uv lock is up to date
-        entry: bash -lc 'uv lock --check'
-        language: system
-        pass_filenames: false
+      - id: uv-lock
+        files: ^(pyproject\.toml|uv\.lock)$
 
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.16.2
+  #   hooks:
+  #     - id: ruff-check
+  #       args: ["--fix"]
+  #     - id: ruff-format
+
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.411
+    hooks:
       - id: pyright
-        name: pyright
-        entry: bash -lc 'uv run pyright'
-        language: system
-        types: [python]
-        pass_filenames: false
-
-      - id: pytest
-        name: pytest
-        entry: bash -lc 'uv run pytest'
-        language: system
-        types: [python]
-        pass_filenames: false
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.44.0
+    rev: v0.49.1
     hooks:
       - id: markdownlint
         files: \.md$
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]

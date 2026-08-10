@@ -1,9 +1,14 @@
 ---
 default: true
 
+
 MD013:
   line_length: 120
-line_length_warning: true
+  heading_line_length: 120
+  headings: true # Enforce line length in headings, as they can affect readability
+  strict: true # Do not ignore long lines in headings, as they can affect readability
+  tables: false # Allow long lines in tables for readability
+  code_blocks: false # Allow long lines in code blocks for readability
 
 # https://updownpress.github.io/markdown-lint
 MD024: false # Allow duplicate headings

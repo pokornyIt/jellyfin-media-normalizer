@@ -497,7 +497,7 @@ class TestLoggingMixin:
     """Tests for :class:`LoggingMixin`."""
 
     def test_log_property_returns_logger(self) -> None:
-        """log property returns a logging.Logger instance.
+        """Log property returns a logging.Logger instance.
 
         :return: None
         """
@@ -510,7 +510,7 @@ class TestLoggingMixin:
         assert isinstance(instance.log, logging.Logger)
 
     def test_log_name_includes_class_name(self) -> None:
-        """log property returns a logger named after the class.
+        """Log property returns a logger named after the class.
 
         :return: None
         """
@@ -523,7 +523,7 @@ class TestLoggingMixin:
         assert "SomeService" in instance.log.name
 
     def test_log_name_includes_module_name(self) -> None:
-        """log property logger name includes the module.
+        """Log property logger name includes the module.
 
         :return: None
         """

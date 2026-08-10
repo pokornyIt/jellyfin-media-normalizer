@@ -1,5 +1,7 @@
 # Commit Message Conventions
 
+[English](COMMIT_CONVENTIONS.md) | [Čeština](../cs/COMMIT_CONVENTIONS.md)
+
 This project uses a structured commit message style inspired by **Conventional Commits**.
 
 ## Format

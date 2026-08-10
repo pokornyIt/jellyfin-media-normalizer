@@ -24,7 +24,7 @@ from jellyfin_media_normalizer.utils.logging import get_logger, setup_logging
 @click.group()
 @click.pass_context
 def app(ctx: click.Context) -> None:
-    """Main CLI group."""
+    """Run the main CLI group."""
     settings: Settings = Settings.from_env()
     settings.ensure_directories()
 

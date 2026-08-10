@@ -1,5 +1,7 @@
 # Commit Message Conventions
 
+[English](../en/COMMIT_CONVENTIONS.md) | [Čeština](COMMIT_CONVENTIONS.md)
+
 Tento projekt používá strukturované commit zprávy inspirované **Conventional Commits**.
 
 ## Formát

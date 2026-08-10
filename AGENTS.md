@@ -8,18 +8,19 @@ These instructions apply to the entire repository unless a more specific nested 
 
 Use the project documents according to their roles:
 
-- `PROJECT-DESCRIPTION.md` defines the current stable product scope, domain rules, and safety constraints.
-- `PRODUCT_DEVELOPMENT_BRIEF.md` defines the target product direction and records unresolved product decisions.
-- `DEVELOPMENT_PLAN.md` tracks implementation status, priorities, and verification snapshots.
-- `README.md` documents behavior and workflows currently available to operators.
+- `docs/en/PROJECT-DESCRIPTION.md` defines the current stable product scope, domain rules, and safety constraints.
+- `docs/en/PRODUCT_DEVELOPMENT_BRIEF.md` defines the target product direction and records unresolved product decisions.
+- `docs/en/DEVELOPMENT_PLAN.md` tracks implementation status, priorities, and verification snapshots.
+- `README.md` and `README.cs.md` document behavior and workflows currently available to operators.
 
 Keep implementation, examples, tests, and documentation consistent with these sources. If a requested change
 conflicts with them, call out the conflict and update the appropriate source document as part of the same change
 when authorized.
 
-For current behavior, verify the implementation and `README.md`. For new product behavior, follow accepted decisions
-in `PRODUCT_DEVELOPMENT_BRIEF.md`; do not implement choices that the brief still marks as open. Keep
-`PROJECT-DESCRIPTION.md` and `DEVELOPMENT_PLAN.md` aligned when an accepted decision changes scope or priorities.
+For current behavior, verify the implementation and both README language versions. For new product behavior, follow
+accepted decisions in `docs/en/PRODUCT_DEVELOPMENT_BRIEF.md`; do not implement choices that the brief still marks as
+open. Keep `docs/en/PROJECT-DESCRIPTION.md` and `docs/en/DEVELOPMENT_PLAN.md` aligned when an accepted decision changes
+scope or priorities.
 
 Do not treat roadmap items or target-state requirements as already implemented behavior.
 
@@ -56,7 +57,7 @@ These rules are non-negotiable and must be preserved in all generated code:
 
 ## Technical Stack
 
-- Python 3.14.2
+- Python 3.14 (`>=3.14,<3.15`)
 - dependency management: `uv`
 - linting and formatting: `ruff`
 - type checking: `pyright`
@@ -74,12 +75,11 @@ project-local `.venv`, declare dependencies in `pyproject.toml`, and keep `uv.lo
 ## Documentation Guidance
 
 - English documentation lives under `docs/en/`; paired Czech documentation lives under `docs/cs/`.
-- Preserve matching file names and directory structures between `docs/en/` and `docs/cs/` where a translation exists.
-- Treat English documentation as canonical and keep Czech translations semantically aligned.
-- If only one language is updated, mention the documentation mismatch in the final summary unless the user explicitly
-  requested a single-language change.
-- Existing top-level documents remain authoritative until their planned migration into `docs/` is completed.
-  When moving them, update source-of-truth references and both language trees in the same documentation change.
+- Keep matching file names and directory structures between `docs/en/` and `docs/cs/` for every maintained document.
+- Treat English documentation as canonical and update its Czech counterpart in the same change whenever content or
+  links change. This includes the root `README.md` and `README.cs.md` pair.
+- Do not merge a documentation change while the language versions are semantically inconsistent unless the user
+  explicitly requests a temporary single-language change; report that mismatch clearly.
 - Keep documentation operational and example-driven; avoid marketing language.
 - Keep changes scoped to the requested documents and avoid unrelated rewrites or bulk reformatting.
 - Keep stable product requirements separate from implementation status and dated verification results.
@@ -114,8 +114,8 @@ Use this form for a wide table when an exception is necessary:
 
 Follow the allowed types, format, and examples in:
 
-- `COMMIT_CONVENTIONS.md` (canonical, English)
-- `COMMIT_CONVENTIONS.cs.md` (Czech reference)
+- `docs/en/COMMIT_CONVENTIONS.md` (canonical, English)
+- `docs/cs/COMMIT_CONVENTIONS.md` (Czech reference)
 
 - Subject line must be imperative and concise, ideally up to 72 characters.
 - Use English in commit messages.
@@ -124,6 +124,7 @@ Follow the allowed types, format, and examples in:
 ## Python Style Conventions
 
 - Follow **PEP 8** and keep code readable and explicit.
+- Use a maximum Python line length of 120 characters, as configured for Ruff.
 - Use English for Python code, identifiers, filenames, comments, and docstrings.
 - Naming conventions:
   - variables and functions: `snake_case`

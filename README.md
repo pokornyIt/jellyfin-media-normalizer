@@ -1,14 +1,16 @@
 # jellyfin-media-normalizer
 
+[English](README.md) | [Čeština](README.cs.md)
+
 Normalize movie and TV series names for Jellyfin. Scans a media library, classifies files, validates parsed results,
 and looks up provider IDs from TMDb and TVDB.
 
 For the full project design, naming conventions, and implementation phases,
-see [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md).
+see [Project Description](docs/en/PROJECT-DESCRIPTION.md).
 
 ## Requirements
 
-- Python 3.14.2
+- Python 3.14 (`>=3.14,<3.15`)
 - [uv](https://github.com/astral-sh/uv) for dependency management
 
 ## Installation
@@ -221,7 +223,7 @@ uv run jellyfin-media-normalizer validate-path /path/to/check
 
 | Tool                                            | Purpose                               |
 | ----------------------------------------------- | ------------------------------------- |
-| Python 3.14.2                                   | Core language                         |
+| Python 3.14 (`>=3.14,<3.15`)                    | Core language                         |
 | [uv](https://github.com/astral-sh/uv)           | Dependency and environment management |
 | [ruff](https://github.com/astral-sh/ruff)       | Linting and formatting                |
 | [pyright](https://github.com/microsoft/pyright) | Static type checking                  |

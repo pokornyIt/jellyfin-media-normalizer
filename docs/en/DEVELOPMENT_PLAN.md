@@ -1,5 +1,7 @@
 # Development Plan
 
+[English](DEVELOPMENT_PLAN.md) | [Čeština](../cs/DEVELOPMENT_PLAN.md)
+
 This document tracks implementation status and next steps for jellyfin-media-normalizer.
 
 It should be updated continuously and used as the practical execution checklist for upcoming phases.
@@ -42,16 +44,16 @@ All development tasks must preserve these rules:
 
 ## Phase Status
 
-| Phase | Area | Status |
-| --- | --- | --- |
-| 1 | Inventory and scan | Done |
-| 2 | Classification | Done |
-| 3 | Name normalization | Done |
-| 4 | Validation | Done |
-| 5 | Provider ID lookup | Done |
-| 6 | Rename planning (manifest generation) | Not started |
-| 7 | Batch rename execution | Not started |
-| 8 | Review workflow exports | Partial (HTML done, CSV missing) |
+| Phase | Area                                  | Status                           |
+| ----- | ------------------------------------- | -------------------------------- |
+| 1     | Inventory and scan                    | Done                             |
+| 2     | Classification                        | Done                             |
+| 3     | Name normalization                    | Done                             |
+| 4     | Validation                            | Done                             |
+| 5     | Provider ID lookup                    | Done                             |
+| 6     | Rename planning (manifest generation) | Not started                      |
+| 7     | Batch rename execution                | Not started                      |
+| 8     | Review workflow exports               | Partial (HTML done, CSV missing) |
 
 ## UX/Product Direction for Large Libraries
 

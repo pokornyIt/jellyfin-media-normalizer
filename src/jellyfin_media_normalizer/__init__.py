@@ -1,1 +1,1 @@
-"""Package for jellyfin media normalizer"""
+"""Package for jellyfin media normalizer."""
