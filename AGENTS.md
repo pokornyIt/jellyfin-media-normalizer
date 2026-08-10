@@ -1,45 +1,58 @@
-# GitHub Copilot Instructions
+# Repository Instructions
 
 You are assisting with the `jellyfin-media-normalizer` project.
 
-## Instruction File Integration
+## Scope And Sources Of Truth
 
-When editing files, also follow repository-scoped instruction files in `.github/instructions/`:
+These instructions apply to the entire repository unless a more specific nested `AGENTS.md` file applies.
 
-- `markdown.instructions.md` for `**/*.md`
-- `python.instructions.md` for `**/*.py`
-- `yaml.instructions.md` for `**/*.yaml` and `**/*.yml`
+Use the project documents according to their roles:
 
-If there is a conflict, follow this precedence:
+- `PROJECT-DESCRIPTION.md` defines the current stable product scope, domain rules, and safety constraints.
+- `PRODUCT_DEVELOPMENT_BRIEF.md` defines the target product direction and records unresolved product decisions.
+- `DEVELOPMENT_PLAN.md` tracks implementation status, priorities, and verification snapshots.
+- `README.md` documents behavior and workflows currently available to operators.
 
-1. direct user request
-2. `AGENTS.md`
-3. matching `.github/instructions/*.md` file
+Keep implementation, examples, tests, and documentation consistent with these sources. If a requested change
+conflicts with them, call out the conflict and update the appropriate source document as part of the same change
+when authorized.
+
+For current behavior, verify the implementation and `README.md`. For new product behavior, follow accepted decisions
+in `PRODUCT_DEVELOPMENT_BRIEF.md`; do not implement choices that the brief still marks as open. Keep
+`PROJECT-DESCRIPTION.md` and `DEVELOPMENT_PLAN.md` aligned when an accepted decision changes scope or priorities.
+
+Do not treat roadmap items or target-state requirements as already implemented behavior.
+
+## Communication And Language
+
+- Communicate with the user in Czech.
+- Use English for identifiers, comments, docstrings, tests, logs, errors, configuration comments, canonical English
+  documentation, commit messages, and pull request text.
+- Write Czech documentation only in the paired Czech documentation tree described below.
 
 ## Project Purpose
 
-This project is used to scan, classify, validate, normalize, and safely rename a large movie
+This project is intended to scan, classify, validate, normalize, and safely rename a large movie
 and TV series library for Jellyfin.
 
 The project must:
 
-- normalize movie and TV series names into a consistent naming scheme
-- validate parsed results before applying changes
-- look up a single provider ID for movies and TV series
-- generate rename plans before executing any filesystem changes
-- support safe batch-based rename execution
-- avoid `.nfo` files
-- keep the filesystem readable and clean
+- normalize movie and TV series names into a consistent naming scheme;
+- validate parsed results and provider selections;
+- identify each movie or TV series with at most one provider ID;
+- generate reviewable rename manifests;
+- execute approved changes safely in logical batches;
+- keep the filesystem readable and clean.
 
 ## Key Constraints
 
 These rules are non-negotiable and must be preserved in all generated code:
 
-- no `.nfo` files
-- one provider ID per movie or TV series only; no episode-level IDs
-- no rename without a validated plan
-- no bulk rename without a generated manifest
-- dry-run must be the default execution mode
+- Never process, create, rename, or delete `.nfo` files.
+- Store at most one selected provider ID per movie or TV series; never store episode-level IDs.
+- Every rename must originate from a validated, approved, and persisted manifest.
+- Never rename directly from raw parsing or provider lookup output.
+- Dry-run must be the default; real execution requires explicit opt-in.
 
 ## Technical Stack
 
@@ -49,28 +62,60 @@ These rules are non-negotiable and must be preserved in all generated code:
 - type checking: `pyright`
 - tests: `pytest`
 
+Use `uv` for dependency management, virtual environments, locking, and Python command execution. Use the
+project-local `.venv`, declare dependencies in `pyproject.toml`, and keep `uv.lock` synchronized.
+
+- Do not rely on OS-level or globally installed Python development tools.
+- Do not use `pip install` for normal project dependency management.
+- Do not introduce `requirements.txt` as the primary dependency definition.
+- Do not add a production dependency without a concrete need and an explanation in the change summary.
+- Use only commands supported by configuration files currently present in the repository.
+
+## Documentation Guidance
+
+- English documentation lives under `docs/en/`; paired Czech documentation lives under `docs/cs/`.
+- Preserve matching file names and directory structures between `docs/en/` and `docs/cs/` where a translation exists.
+- Treat English documentation as canonical and keep Czech translations semantically aligned.
+- If only one language is updated, mention the documentation mismatch in the final summary unless the user explicitly
+  requested a single-language change.
+- Existing top-level documents remain authoritative until their planned migration into `docs/` is completed.
+  When moving them, update source-of-truth references and both language trees in the same documentation change.
+- Keep documentation operational and example-driven; avoid marketing language.
+- Keep changes scoped to the requested documents and avoid unrelated rewrites or bulk reformatting.
+- Keep stable product requirements separate from implementation status and dated verification results.
+- Update examples and operator documentation when behavior, configuration, or workflows change.
+- Keep terminology consistent with the Jellyfin media normalization domain, including provider lookup, manifests,
+  dry-run safety, and human approval.
+
+## Markdown Conventions
+
+These rules apply to every `*.md` file in the repository.
+
+- Follow `.markdownlint.yml` and treat every enabled rule as required.
+- Do not add inline or file-level lint exceptions when the content can be written clearly without them.
+- The configured exceptions `MD024`, `MD025`, `MD036`, and `MD041` are permitted; do not disable additional rules
+  without a concrete repository need.
+- Keep normal prose within the configured `MD013` limit of 120 characters.
+- Use local `MD013` disable and enable comments only when necessary for long URLs, command output, or wide tables.
+- Do not aggressively reflow tables only to satisfy line length.
+- Keep any disabled region as small as possible, preferably around one table only.
+
+Use this form for a wide table when an exception is necessary:
+
+```md
+<!-- markdownlint-disable MD013 -->
+| Column A | Column B | Column C |
+| -------- | -------- | -------- |
+| ...      | ...      | ...      |
+<!-- markdownlint-enable MD013 -->
+```
+
 ## Commit Messages
 
-For commit message details and examples, consult:
+Follow the allowed types, format, and examples in:
 
 - `COMMIT_CONVENTIONS.md` (canonical, English)
 - `COMMIT_CONVENTIONS.cs.md` (Czech reference)
-
-If there is any conflict between these files and this document, follow `AGENTS.md`.
-
-Use **Conventional Commits** with one of these prefixes (choose the best match):
-
-- `feat:` new feature
-- `fix:` bug fix
-- `docs:` documentation only
-- `refactor:` refactoring without behavior change
-- `perf:` performance improvements
-- `test:` tests only
-- `chore:` tooling, dependencies, CI, and non-production tasks
-- `ci:` CI pipeline changes
-- `build:` packaging and build changes
-
-Guidelines:
 
 - Subject line must be imperative and concise, ideally up to 72 characters.
 - Use English in commit messages.
@@ -79,25 +124,38 @@ Guidelines:
 ## Python Style Conventions
 
 - Follow **PEP 8** and keep code readable and explicit.
-- Use English for all code, identifiers, filenames, comments, and markdown files.
+- Use English for Python code, identifiers, filenames, comments, and docstrings.
 - Naming conventions:
   - variables and functions: `snake_case`
   - classes: `CamelCase`
   - constants: `UPPER_SNAKE_CASE`
+- Use `snake_case.py` for Python filenames; never use hyphens.
 - Prefer small, testable functions.
 - Avoid hidden side effects and global mutable state.
 - Prefer the standard library when reasonable.
 - Prefer clear and explicit data flow over clever or compact code.
 - Use `pathlib.Path` for filesystem paths.
-- Use type hints for all public functions and important internal functions.
+- Add type annotations to every function and method signature, including return types.
+- Add explicit type annotations to module-level and local variables introduced by assignment, even when inference is
+  possible.
+- Inline annotations are not required for `for` loop targets, comprehensions, context managers, exception targets,
+  assignment expressions, or unpacking assignments.
+- Prefer precise types and avoid `Any` when a narrower type or model is practical.
+- Prefer `str | None` to `Optional[str]` and built-in generic collections such as `list[str]`.
+- Use `TypeAlias` or `TypedDict` for complex data shapes when a dedicated model would not be clearer.
+- Annotate constants with `Final` and an explicit type when practical.
+- Do not introduce a separate static type-checker configuration unless explicitly requested.
 - Prefer dataclasses or Pydantic models for structured data.
 - Separate parsing, validation, lookup, planning, and execution logic.
+- Keep modules focused and avoid speculative abstractions or unused extension frameworks.
+- Keep imports organized and never use wildcard imports.
+- Prefer specific exception handling over broad `except Exception` blocks.
+- Give standalone executable Python scripts a `#!/usr/bin/env python3` shebang and a module docstring. Package modules
+  do not need a shebang.
 
 ## Docstring Rules
 
-Docstrings are required for all classes and all functions.
-
-Use reStructuredText docstring format.
+Use English reStructuredText docstrings.
 
 Use this style:
 
@@ -114,10 +172,42 @@ Rules:
 
 - Use `:param var: description`
 - Use `:return: description` where applicable
+- Use `:raises ExceptionType:` for relevant documented failure modes.
 - Do not use `:type:`
 - Do not use `:rtype:`
-- Keep docstrings concise and useful
-- Every public and internal class/function must have a docstring
+- Keep docstrings concise and focused on contracts, behavior, and non-obvious failure modes.
+- Every public and internal class, function, and method must have a docstring, including private helpers,
+  constructors, special methods, and nested functions.
+- Constructor docstrings must describe every parameter other than `self`.
+- Test methods must state the behavior they verify. They do not need `:param:` fields for pytest fixtures or
+  parametrized values.
+- Do not place a bare string after a constant assignment as a pseudo-docstring. Add a comment only when the purpose,
+  unit, or derivation is not clear from context.
+
+## Errors, Logging, And Security
+
+- Raise specific exceptions in reusable and library code; do not call `sys.exit` there.
+- Exit the process only from `main()` or an equivalent top-level CLI layer.
+- Use logging for operational and diagnostic output. Use `click.echo` or `print` only for intentional CLI output.
+- Reuse `setup_logging`, `get_logger`, and `LoggingMixin` from `jellyfin_media_normalizer.utils.logging`; do not use
+  the root logger directly in library modules.
+- Keep severity semantics aligned with `ERROR`, `WARNING`, `INFO`, and `DEBUG`.
+- Keep log messages concise and actionable; avoid noisy logging in hot loops unless guarded by log level.
+- Make error messages actionable and include relevant non-secret context such as a path, provider, or expected field.
+- Read provider credentials and other secrets only from documented environment variables or supported secret files.
+- Never commit credentials, private media metadata, or generated workspace data.
+- Never log API keys, environment contents, authorization headers, or complete URLs containing credentials.
+- Sanitize secrets from exception messages and HTTP diagnostics.
+- Never weaken TLS certificate verification.
+- Preserve structured logging conventions and keep logs useful for long-running operations.
+
+## Configuration Changes
+
+- Validate configuration values strictly and fail with actionable messages.
+- Reject unknown configuration keys when a structured configuration format is introduced.
+- Keep documented defaults, examples, and runtime behavior aligned.
+- Update example configuration whenever schema, defaults, units, or accepted formats change.
+- Keep credentials out of committed YAML, JSON, environment examples, and source code.
 
 ## Testing Rules
 
@@ -133,6 +223,12 @@ Testing conventions:
 - Avoid unnecessary mocks when simple input/output testing is enough.
 - Focus tests on parser behavior, validation rules, provider ID lookup decisions, and rename planning.
 - Cover valid, invalid, edge, and ambiguous cases.
+- Add or update tests for every behavior change, including the affected happy path and relevant boundary or failure
+  cases.
+- Tests must not require live provider credentials, Internet access, destructive filesystem changes, or wall-clock
+  waiting.
+- Use test doubles for HTTP and other external boundaries and controllable clocks for time-dependent behavior.
+- Do not add tests for trivial I/O-only flows unless the user requests them.
 
 Example:
 
@@ -163,49 +259,63 @@ class TestMovieNameParser:
         ...
 ```
 
+## YAML Conventions
+
+These rules apply to all `*.yaml` and `*.yml` files in the repository.
+
+- Use consistent two-space indentation.
+- Prefer explicit booleans such as `true` and `false`.
+- Quote strings when an unquoted value could be interpreted ambiguously.
+- Preserve single-document or multi-document structure already used by the file.
+- Keep changes focused and do not reformat unrelated blocks.
+- Keep configuration local to this project and avoid cross-project coupling.
+- Never add plaintext credentials, API tokens, or private keys.
+- Keep example configuration usable with non-sensitive placeholders.
+
 ## Architecture Guidance
 
-Code is organized into clear layers. Each layer maps to one or more project phases.
+Code is organized into clear layers with explicit responsibilities.
 
 ```text
-models/       — shared data structures (MediaItem, RenameEntry, ProviderMatch, etc.)
-scanners/     — Phase 1: filesystem scan and inventory
-parsers/      — Phase 2–3: classification and name normalization
-validators/   — Phase 4: validation and confidence scoring
-providers/    — Phase 5: provider ID lookup (TMDb, TVDB, IMDb)
-services/     — orchestration of scan/parse/provider workflows
-reporters/    — review report generation (currently JSON and planned CSV and HTML)
-cli/          — command entry points and command dispatch
-utils/        — shared infrastructure (logging, paths)
+models/       — shared typed data structures
+scanners/     — filesystem scan and inventory
+parsers/      — classification and name normalization
+validators/   — validation and confidence scoring
+providers/    — embedded ID, cache, and TMDb/TVDB lookup
+services/     — application workflow orchestration
+reporters/    — JSON and HTML reports; CSV is planned
+cli/          — command entry points and dispatch
+utils/        — shared infrastructure such as logging and paths
 settings.py   — runtime configuration and path defaults
 constants.py  — shared constants and defaults
 
 # reserved/planned layers
-planners/     — Phase 6: rename manifest generation
-executors/    — Phase 7: batch rename execution and rollback logging
+planners/     — validated rename manifest generation
+executors/    — batch execution, audit, and rollback support
 ```
 
 Notes on specific layers:
 
 - `providers/` handles all external API communication for provider ID lookup. This is the only layer that makes network
   requests. It should be replaceable without affecting other layers.
-- `reporters/` produces review output for ambiguous matches, unresolved filenames, and items requiring manual approval.
-  It has no side effects on the filesystem.
-- `services/` coordinates parser/validator/provider steps and should remain free of direct filesystem side effects
-  outside explicit scan/report workflows.
-- `executors/` must support dry-run mode. Dry-run should be the default. Actual rename execution requires
-  an explicit opt-in flag.
+- `reporters/` may write requested report files, but it must never modify the media library.
+- `services/` coordinates workflows and may use explicit persistence abstractions, but it must never mutate the media
+  library directly.
+- `executors/` owns all media-library mutations and must enforce manifest input, dry-run defaults, explicit opt-in,
+  audit logging, batch safety, and rollback support.
 
-Suggested principles:
+## Docker And Compose
 
-- never rename files directly from raw parsing or raw provider lookup
-- always generate a validated plan first
-- keep side effects isolated to `executors/`
-- make dry-run behavior easy to support
-- design for batch execution and rollback logging
-- keep provider integration replaceable
+- Treat Docker Compose as the primary operator deployment path once container support is implemented.
+- Run production containers as a non-root user.
+- Do not bake credentials, workspace data, media files, or installation-specific configuration into images.
+- Keep the default media-library mount read-only.
+- Require an explicit execution configuration for read-write media access.
+- Keep workspace persistence separate from the media-library mount.
+- Do not use privileged mode, host networking, or Docker socket access without an approved and documented need.
+- Container access does not bypass manifest, validation, dry-run, confirmation, audit, or rollback requirements.
 
-## What Copilot Should Optimize For
+## Engineering Priorities
 
 When generating code, optimize for:
 
@@ -219,19 +329,46 @@ Do not optimize for cleverness.
 
 Avoid hidden behavior, magic defaults, and tightly coupled code.
 
-## Output Expectations
+## Simplicity And Validation Boundaries
 
-When proposing code:
+- Prefer the simplest direct implementation that clearly satisfies the requirement.
+- Structure code into small cohesive components with explicit responsibilities, dependencies, inputs, and outputs.
+- Do not introduce pass-through wrappers, unnecessary indirection, premature extension points, or configuration flags
+  without a current concrete use case.
+- Validate untrusted data once at the boundary where it enters the application, such as CLI or web input, environment
+  configuration, filesystem data, persisted state, deserialization, or provider responses.
+- After successful validation, represent data with a typed validated model or explicit workflow state. Downstream
+  functions should trust that contract instead of repeating identical validation.
+- Revalidate only when data may have changed, crosses a new trust boundary, or enters a state transition with stronger
+  invariants.
+- Planning, dry-run, and real execution are separate safety boundaries. Executors must revalidate relevant source and
+  destination filesystem state because it can change between those stages.
+- Make function preconditions clear through types, names, and concise docstrings rather than defensive checks in every
+  call layer.
 
-- include complete functions or classes
-- preserve project conventions
-- include docstrings
-- include type hints
-- include tests when relevant
-- avoid placeholder logic unless explicitly requested
+## Implementation Expectations
 
-When modifying code:
+- Provide complete implementations and avoid placeholder logic unless explicitly requested.
+- Keep the existing structure unless there is a clear reason to improve it.
+- Prefer minimal safe changes and preserve compatibility with the current project design.
 
-- keep the existing structure unless there is a clear reason to improve it
-- prefer minimal safe changes
-- preserve compatibility with the current project design
+## Validation Requirements
+
+Use narrower validation scopes during iteration when practical, then run checks proportional to the final change.
+
+- Markdown changes: `uv run pre-commit run markdownlint --files <changed-md-files>`.
+- Documentation-wide changes: `uv run pre-commit run markdownlint --all-files`.
+- YAML changes: `uv run pre-commit run check-yaml --files <changed-yaml-files>`.
+- Python behavior changes: `uv run ruff format --check .`, `uv run ruff check .`, `uv run pyright`, and
+  `uv run pytest`.
+- Container changes, when the files exist: `docker build .` and `docker compose config`.
+- Repository-wide final validation when appropriate: `uv run pre-commit run --all-files`.
+
+If a required check cannot run, state that clearly in the final report.
+
+## Change Discipline
+
+- Inspect the working tree before editing and preserve unrelated user changes.
+- Do not edit generated files manually when an appropriate generator exists.
+- Do not mix product requirements, implementation status, and historical verification results in one source of truth.
+- Report which checks ran, which checks did not run, and why.
