@@ -73,7 +73,8 @@ schvalování. Hlavní instalační cesta nesmí vyžadovat instalaci Pythonu na
 
 ## Neměnná bezpečnostní pravidla
 
-- Nikdy nezpracovávat, nevytvářet, nepřejmenovávat ani nemazat soubory `.nfo`.
+- Nikdy samostatně nečíst, neparsovat, nevytvářet, neměnit, nemazat ani necílit na soubory `.nfo`. Soubor `.nfo` se
+  smí přesunout pouze jako ignorovaný obsah přejmenované nadřazené složky a nikdy nedostane vlastní položku manifestu.
 - U entity filmu nebo seriálu uložit nejvýše jedno vybrané ID poskytovatele.
 - Nikdy neukládat ID poskytovatelů do entit epizod ani jejich názvů souborů.
 - Nikdy nepřejmenovávat přímo z výstupu skenování, parsování, ověření nebo vyhledání poskytovatele.
@@ -111,11 +112,15 @@ Nikdy nevlastní ID poskytovatele.
 
 ### Související soubor
 
-Titulky a jiné explicitně podporované doprovodné soubory musí být propojeny se svým videem, aby po přejmenování
-nezůstaly osiřelé. Soubory `.nfo` zůstávají vyloučené, i když jsou přítomné.
+Podporované soubory titulků musí být propojeny se svým videem, aby po přejmenování nezůstaly osiřelé. První vydání
+podporuje soubory `.srt`, `.ass`, `.ssa`, `.vtt` a `.sub`. Vlastnictví vyžaduje stejný základ názvu jako video nebo
+tento základ následovaný pouze rozpoznanými jazykovými a titulkovými příznaky, například `cs`, `en`, `forced`, `sdh`,
+`cc` nebo `default`. Příznaky se při přejmenování videa a titulků zachovají. Osiřelé titulky nebo kolize cílového
+názvu vyžadují kontrolu.
 
-První implementace musí explicitně určit podporované přípony souvisejících souborů. Minimální kategorií mají být
-titulky.
+Ostatní typy souborů se ignorují a nedostanou samostatnou operaci parsování, ověření, plánování ani provedení. Při
+přejmenování nadřazené složky v ní zůstanou. Soubory `.nfo` se chovají stejně jako ignorovaný obsah, ale nikdy se
+nečtou, nemodelují ani nezahrnují jako samostatné položky manifestu.
 
 ### Pole názvů
 
@@ -451,21 +456,57 @@ Po přijetí tohoto zadání aktualizujte stávající dokumenty následovně.
 - Vysvětlit, které soubory se skenují, ignorují, přesouvají společně a kterých se aplikace nikdy nedotkne.
 - Přidat řešení potíží s cestami, přihlašovacími údaji, nevyřešenými kandidáty a dry-run.
 
+## Přijatá produktová rozhodnutí
+
+### Rozložení a klasifikace knihovny
+
+- Aplikace skenuje jeden nakonfigurovaný kořen knihovny obsahující filmy i televizní seriály. Kořen je neutrální
+  kontejner; složky pod ním se klasifikují podle svého obsahu a struktury.
+- Role složek jsou filmová kolekce, kolekce seriálů, televizní seriál, sezóna a nekompatibilní složka. Po klasifikaci
+  musí podstromy filmových a seriálových kolekcí zůstat homogenní.
+- Skenování sestupuje nejvýše pět adresářových úrovní pod kořen. Obsah za limitem se oznámí jako nekompatibilní,
+  místo aby se tiše vynechal.
+- Film je videosoubor a nevyžaduje vlastní složku. Jeho jediné ID poskytovatele patří do názvu souboru filmu. Složky
+  žánrů a kolekcí zůstávají organizační a nedostávají ID poskytovatele.
+- Televizní seriál vlastní složku seriálu s jedním ID poskytovatele a bez roku. Normalizovaná struktura pod ní je
+  striktně `Season XX`, následovaná soubory epizod a jejich podporovanými souvisejícími soubory bez další úrovně.
+- Soubory epizod přímo ve vstupní složce seriálu lze opravit. Jednoznačné `SxxExx` určí sezónu. Číslo epizody bez
+  sezóny navrhne `Season 01` a vyžádá kontrolu. Nejednoznačné číslování vyžaduje kontrolu bez automatického plánu.
+- Vnořené složky sezón a smíšený obsah filmů a seriálů jsou nekompatibilní a obdrží doporučení k nápravě.
+- Soubor filmu nebo složka seriálu přímo v kořeni knihovny zůstává zpracovatelná a může být připravena k plánování,
+  ale obdrží neblokující varování, protože smíšený kořen není vhodným cílovým rozložením Jellyfinu.
+- Položka s bezpečně určeným strukturálním vlastnictvím, ale nejistými metadaty směřuje ke kontrole. Položka, jejíž
+  vlastnictví nebo roli složky nelze určit, je nekompatibilní a nesmí vstoupit do výběru poskytovatele, schválení ani
+  manifestu přejmenování.
+- Soubory `.nfo` se vždy ignorují a nikdy nevstupují do doménového modelu ani samostatné operace se souborovým
+  systémem. Smí se přesunout pouze jako obsah přejmenované nadřazené složky.
+- Právě jedno syntakticky platné ID poskytovatele slučitelné s typem média, které již je v názvu souboru filmu nebo
+  složky seriálu, vyřeší entitu bez mezipaměti či online vyhledávání. ID jinde, více ID a ID na úrovni epizody entitu
+  nevyřeší a vyžadují ověření. Pozdější explicitní oprava operátorem zůstává auditovatelná.
+
+### Související soubory
+
+- První vydání podporuje přípony titulků `.srt`, `.ass`, `.ssa`, `.vtt` a `.sub`.
+- Titulky patří k videu, pokud mají stejný základ názvu nebo přidávají pouze rozpoznané jazykové a titulkové příznaky.
+  Tyto příznaky se při přejmenování zachovají.
+- Osiřelé titulky a kolize cílových názvů titulků vyžadují kontrolu a nesmějí vstoupit do spustitelného manifestu.
+- Nepodporované typy souborů se jako samostatné položky ignorují a zůstávají uvnitř přejmenované nadřazené složky.
+- Soubor `.nfo` se nikdy nečte, nemodeluje, nemění, nemaže ani nezahrnuje jako samostatná operace manifestu. Smí se
+  přesunout pouze jako ignorovaný obsah přejmenované nadřazené složky.
+
 ## Otevřená produktová rozhodnutí
 
-Před zahájením implementace fáze 1 je třeba rozhodnout:
+Následující rozhodnutí zůstávají otevřená a je třeba je přijmout před zahájením implementace fáze 1:
 
-1. Která stávající rozložení adresářů filmů a seriálů budou oficiálně podporována?
-2. Které typy souvisejících souborů se v prvním vydání přesouvají spolu s videem?
-3. Jak se reprezentují alternativní verze a vícedílné filmy, speciály a bonusy?
-4. Jaký je závazný zdroj konečného českého zobrazovaného názvu při rozdílu mezi souborem a poskytovatelem?
-5. Mají složky seriálů rok vynechávat vždy, nebo jej smí operátor povolit u nejednoznačných remaků?
-6. Jaké prahy skóre umožní automatické přijetí poskytovatele?
-7. Má první UI podporovat pouze localhost, nebo i autentizovaný přístup z NAS či LAN?
-8. Jaký otisk stavu zdroje je vyžadován mezi plánováním, dry-run a provedením?
-9. Vyžaduje první vydání automatické vrácení změn, nebo stačí deterministická pomoc s jejich vrácením?
-10. Které architektury kontejnerů se musí publikovat, zejména pro cílový Synology NAS?
-11. Jaký explicitní mechanismus Compose povolí zápis a současně zachová běžný provoz pouze ke čtení?
+1. Jak se reprezentují alternativní verze a vícedílné filmy, speciály a bonusy?
+2. Jaký je závazný zdroj konečného českého zobrazovaného názvu při rozdílu mezi souborem a poskytovatelem?
+3. Mají složky seriálů rok vynechávat vždy, nebo jej smí operátor povolit u nejednoznačných remaků?
+4. Jaké prahy skóre umožní automatické přijetí poskytovatele?
+5. Má první UI podporovat pouze localhost, nebo i autentizovaný přístup z NAS či LAN?
+6. Jaký otisk stavu zdroje je vyžadován mezi plánováním, dry-run a provedením?
+7. Vyžaduje první vydání automatické vrácení změn, nebo stačí deterministická pomoc s jejich vrácením?
+8. Které architektury kontejnerů se musí publikovat, zejména pro cílový Synology NAS?
+9. Jaký explicitní mechanismus Compose povolí zápis a současně zachová běžný provoz pouze ke čtení?
 
 Dokud tato rozhodnutí nebudou vyřešena, má implementace upřednostňovat zachování dat, explicitní kontrolu a vratné
 operace před automatizací.

@@ -36,7 +36,8 @@ Další riziko rozsahu a použitelnosti:
 
 Všechny vývojové úkoly musí zachovat tato pravidla:
 
-- Nikdy nezpracovávat ani nevytvářet soubory `.nfo`.
+- Nikdy samostatně nečíst, neparsovat, nevytvářet, neměnit, nemazat ani necílit na soubory `.nfo`. Soubor `.nfo` se
+  smí přesunout pouze jako ignorovaný obsah přejmenované nadřazené složky.
 - Právě jedno ID poskytovatele pro entitu filmu nebo televizního seriálu.
 - Nikdy nepřejmenovávat bez ověřeného plánu.
 - Nikdy neprovádět dávkové přejmenování bez vytvořeného manifestu.

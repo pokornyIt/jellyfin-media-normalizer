@@ -49,7 +49,8 @@ The project must:
 
 These rules are non-negotiable and must be preserved in all generated code:
 
-- Never process, create, rename, or delete `.nfo` files.
+- Never read, parse, create, modify, delete, or target `.nfo` files with standalone operations. An `.nfo` file may
+  move only as an ignored child of a renamed parent directory and must never receive its own manifest entry.
 - Store at most one selected provider ID per movie or TV series; never store episode-level IDs.
 - Every rename must originate from a validated, approved, and persisted manifest.
 - Never rename directly from raw parsing or provider lookup output.
@@ -120,6 +121,13 @@ Follow the allowed types, format, and examples in:
 - Subject line must be imperative and concise, ideally up to 72 characters.
 - Use English in commit messages.
 - If relevant, include a scope in parentheses, for example: `feat(parser): add movie filename parser`
+
+## Branch Names
+
+- Use the format `<issue-number>-<short-description>` for branches associated with an issue.
+- Write the description in lowercase English kebab-case, for example: `5-align-product-documentation`.
+- Do not use category or Conventional Commit prefixes such as `docs/`, `feat/`, `fix/`, or `chore/`.
+- Keep branch names concise while preserving enough context to identify the related work.
 
 ## Pull Requests And Issue Traceability
 

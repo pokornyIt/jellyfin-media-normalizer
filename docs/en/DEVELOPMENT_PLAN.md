@@ -36,7 +36,8 @@ Scale and usability risk to address next:
 
 All development tasks must preserve these rules:
 
-- Never process or generate .nfo files.
+- Never read, parse, create, modify, delete, or target `.nfo` files with standalone operations. An `.nfo` file may
+  move only as an ignored child of a renamed parent directory.
 - Exactly one provider ID per movie or TV series entity.
 - Never rename without a validated plan.
 - Never bulk rename without a generated manifest.

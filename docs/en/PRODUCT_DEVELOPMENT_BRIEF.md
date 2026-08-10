@@ -76,7 +76,8 @@ dependency management.
 
 ## Non-Negotiable Safety Rules
 
-- Never process, create, rename, or delete `.nfo` files.
+- Never read, parse, create, modify, delete, or target `.nfo` files with standalone operations. An `.nfo` file may
+  move only as an ignored child of a renamed parent directory and never receives its own manifest entry.
 - Store at most one selected provider ID on a movie or TV series entity.
 - Never store provider IDs on episode entities or in episode filenames.
 - Never rename from scan, parse, validation, or provider lookup output directly.
@@ -115,11 +116,15 @@ associated files. It never owns a provider ID.
 
 ### Associated File
 
-Subtitles and other explicitly supported sidecar files must be linked to their owning video so they are not
-orphaned by a rename. `.nfo` files remain excluded even when present.
+Supported subtitle files must be linked to their owning video so they are not orphaned by a rename. The first
+release supports `.srt`, `.ass`, `.ssa`, `.vtt`, and `.sub` files. Ownership requires either the same filename stem
+as the video or that stem followed only by recognized language and subtitle qualifiers such as `cs`, `en`, `forced`,
+`sdh`, `cc`, or `default`. Qualifiers are preserved when the video and subtitle are renamed. An orphaned subtitle
+or a target-name collision requires review.
 
-The first implementation must explicitly decide which associated extensions are supported. Subtitles should be
-the minimum supported category.
+Other file types are ignored and receive no individual parse, validation, plan, or execution operation. They remain
+inside a directory when that parent directory is renamed. `.nfo` files follow this ignored-child behavior but are
+never read, modeled, or included as standalone manifest entries.
 
 ### Title Fields
 
@@ -460,21 +465,57 @@ When this brief is accepted, update the existing documents as follows.
 - Explain which files are scanned, ignored, moved together, and never touched.
 - Add troubleshooting for paths, provider credentials, unresolved candidates, and dry-run failures.
 
+## Accepted Product Decisions
+
+### Library Layout And Classification
+
+- The application scans one configured library root containing both movies and TV series. The root is a neutral
+  container; directories below it are classified from their content and structure.
+- Directory roles are movie collection, series collection, TV series, season, and incompatible. Once classified,
+  movie and series collection subtrees must remain homogeneous.
+- Scanning descends through at most five directory levels below the root. Content beyond the limit is reported as
+  incompatible instead of being silently omitted.
+- A movie is a video file and does not require a dedicated folder. Its single provider ID belongs in the movie
+  filename. Genre and collection folders remain organizational and do not receive provider IDs.
+- A TV series owns a series folder with one provider ID and no year. The normalized structure below it is strictly
+  `Season XX` followed by episode files and their supported associated files, without another directory level.
+- Direct episode files in an input series folder are repairable. An explicit `SxxExx` determines the season. An
+  episode number without a season proposes `Season 01` and requires review. Ambiguous numbering requires review
+  without an automatic plan.
+- Nested season directories and mixed movie/series content are incompatible and receive corrective guidance.
+- A movie file or TV series folder directly in the library root remains processable and may become ready for
+  planning, but receives a non-blocking warning because the mixed root is not a suitable final Jellyfin layout.
+- An item with safe structural ownership but uncertain metadata enters review. An item whose ownership or directory
+  role cannot be determined is incompatible and cannot enter provider selection, approval, or a rename manifest.
+- `.nfo` files are always ignored and never enter the domain model or a standalone filesystem operation. They may
+  move only as children of a renamed parent directory.
+- Exactly one syntactically valid, media-compatible provider ID already present in a movie filename or TV series
+  folder name resolves that entity without cache or online lookup. IDs elsewhere, multiple IDs, and episode-level
+  IDs do not resolve an entity and require validation. A later explicit operator correction remains auditable.
+
+### Associated Files
+
+- The first release supports subtitle extensions `.srt`, `.ass`, `.ssa`, `.vtt`, and `.sub`.
+- A subtitle belongs to a video when it has the same filename stem or adds only recognized language and subtitle
+  qualifiers. These qualifiers are preserved during renaming.
+- Orphaned subtitles and subtitle target-name collisions require review and cannot enter an executable manifest.
+- Unsupported file types are ignored as individual items and remain inside a renamed parent directory.
+- An `.nfo` file is never read, modeled, modified, deleted, or included as a standalone manifest operation. It may
+  move only as an ignored child of a renamed parent directory.
+
 ## Open Product Decisions
 
-The following decisions should be made before Stage 1 implementation begins:
+The following decisions remain open and should be made before Stage 1 implementation begins:
 
-1. Which existing directory layouts are officially supported for movies and TV series?
-2. Which associated file types move with a video in the first release?
-3. How are alternate movie versions, multipart movies, specials, and extras represented?
-4. What is the authoritative source of the final Czech display title when the filename and provider differ?
-5. Should series folders omit the year unconditionally, or may the operator enable it for ambiguous remakes?
-6. What scoring thresholds permit automatic provider acceptance?
-7. Is the first supported UI deployment localhost-only, or must authenticated NAS/LAN access be included?
-8. What source-state fingerprint is required between planning, dry-run, and execution?
-9. Is automatic rollback required, or is deterministic rollback assistance sufficient for the first release?
-10. Which container architectures must be published, especially for the target Synology NAS?
-11. Which explicit Compose mechanism enables read-write execution while keeping normal operation read-only?
+1. How are alternate movie versions, multipart movies, specials, and extras represented?
+2. What is the authoritative source of the final Czech display title when the filename and provider differ?
+3. Should series folders omit the year unconditionally, or may the operator enable it for ambiguous remakes?
+4. What scoring thresholds permit automatic provider acceptance?
+5. Is the first supported UI deployment localhost-only, or must authenticated NAS/LAN access be included?
+6. What source-state fingerprint is required between planning, dry-run, and execution?
+7. Is automatic rollback required, or is deterministic rollback assistance sufficient for the first release?
+8. Which container architectures must be published, especially for the target Synology NAS?
+9. Which explicit Compose mechanism enables read-write execution while keeping normal operation read-only?
 
 Until these decisions are resolved, implementation should favor data preservation, explicit review, and reversible
 operations over automation.

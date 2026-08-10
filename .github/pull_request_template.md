@@ -25,6 +25,6 @@ Closes #
 
 ## Safety and documentation
 
-- [ ] The change never processes, creates, renames, or deletes `.nfo` files.
+- [ ] The change never reads, parses, creates, modifies, deletes, or targets `.nfo` files with standalone operations.
 - [ ] Filesystem mutations, if any, require an approved manifest and preserve dry-run defaults.
 - [ ] English and Czech documentation remain semantically aligned, or documentation is not affected.

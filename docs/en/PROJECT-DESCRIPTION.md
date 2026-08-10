@@ -13,8 +13,8 @@ improve media identification, and prepare the library for controlled batch renam
 clutter on disk.
 
 This project does not use `.nfo` files. Jellyfin identification will instead rely on a single provider ID stored
-in the main folder name of a movie or TV series, using Jellyfin-supported identifier formats
-such as `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
+in the movie filename or TV series folder name, using Jellyfin-supported identifier formats such as
+`[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
 
 ## Scope
 
@@ -38,30 +38,64 @@ The project does not include:
 - automatic renaming without validation
 - full automation of uncertain matches
 
+## Library Layout And Classification
+
+The application scans one configured library root that may contain movies and TV series. The library root is a
+neutral container and is not classified as either media type. A movie file or TV series folder directly in the
+library root remains processable and may become ready for planning, but receives a non-blocking warning because
+the mixed root is not a suitable final Jellyfin library layout.
+
+Directories below the root are classified by their contents as movie collections, series collections, TV series,
+seasons, or incompatible directories. A classified movie collection must not contain a TV series subtree, and a
+classified series collection must not contain movie files. Folder names may contribute evidence, but content and
+structure determine the classification.
+
+Scanning descends through at most five directory levels below the configured root. The root has depth zero and a
+file does not add a directory level. Content beyond this limit is reported as incompatible instead of being
+silently omitted.
+
+The normalized TV layout is strict:
+
+```text
+Series Name [provider-id]/
+└── Season 01/
+    └── Episode Title S01E01 - CZ.ext
+```
+
+A series folder contains only normalized season folders, and a season folder contains episode files and their
+supported associated files without another directory level. Direct episode files in an input series folder are
+repairable: an explicit `SxxExx` selects that season, while an episode number without a season proposes
+`Season 01` and requires review. Ambiguous episode numbering requires review without an automatic plan. Nested
+season directories and mixed movie/series content are incompatible and receive corrective guidance.
+
+An item that can be grouped safely but has uncertain metadata enters review. An item whose ownership or structural
+role cannot be determined is incompatible and cannot enter provider selection, approval, or a rename manifest.
+`.nfo` files are always ignored and never enter the domain model or a standalone filesystem operation. They may move
+only as children of a renamed parent directory.
+
 ## Naming Conventions
 
 ### Movies
 
 Movie filenames use the following format:
 
-- `Czech Title (Year) - CZ.ext`
-- `Czech Title (Year) - EN (tit. CZ).ext`
+- `Czech Title (Year) [imdbid-tt1234567] - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - EN (tit. CZ).ext`
 
-The movie folder name contains a single provider ID:
-
-- `Czech Title (Year) [imdbid-tt1234567]`
-- `Czech Title (Year) [tmdbid-12345]`
-
-Only one ID will be stored, based on the selected provider recommendation.
+A movie is a video file and does not require or create a dedicated movie folder. Organizational folders for genres
+and collections remain readable and do not receive provider IDs. A supported associated file uses the same filename
+stem as its owning video and is renamed with it.
 
 ### TV Series
 
-The TV series root folder name uses the following format:
+The TV series folder name uses the following format:
 
 - `Series Name [tvdbid-12345]`
 - `Series Name [tmdbid-12345]`
 
 No year will be used in the TV series folder name, because it may be misleading or confusing.
+
+Season folder names use `Season XX`, for example `Season 01`.
 
 Episode filenames do not contain any provider ID:
 
@@ -70,23 +104,34 @@ Episode filenames do not contain any provider ID:
 
 Language markers use standard two-letter codes: `CZ`, `EN`, `DE`, `SK`, `FR`, `IT`, `ES`.
 
+### Associated Files
+
+The first release supports subtitle files with `.srt`, `.ass`, `.ssa`, `.vtt`, and `.sub` extensions. A subtitle
+belongs to a video when it uses the same filename stem or adds only recognized language and subtitle qualifiers,
+such as `cs`, `en`, `forced`, `sdh`, `cc`, or `default`. Qualifiers are preserved during renaming. Orphaned subtitles
+and target-name collisions require review.
+
+Other file types are ignored as individual items and remain inside a directory when that parent directory is
+renamed. An `.nfo` file is never read, parsed, modeled, created, modified, deleted, or targeted by a standalone
+manifest operation. It may move only as ignored content of a renamed parent directory.
+
 ## Metadata Strategy
 
 The project avoids local metadata sidecar files such as `.nfo` in order to keep the filesystem readable
 and uncluttered when browsing the storage directly.
 
-Instead, Jellyfin identification will be improved by adding a single provider ID only to the main movie
-or series folder name.
+Instead, Jellyfin identification will be improved by adding a single provider ID to the movie filename or TV series
+folder name.
 
 Provider priority:
 
-- Movies: primary lookup through TMDb, with one final selected ID stored in the folder name
+- Movies: primary lookup through TMDb, with one final selected ID stored in the video filename
 - TV Series: online lookup order is TMDb TV first, then TVDB; one final selected ID is stored in the series folder name
 - Episodes: no provider ID lookup; no ID stored in the filename
 
 ## Design Principles
 
-- No `.nfo` files
+- No standalone `.nfo` processing or manifest operations
 - One provider ID per movie or TV series; no episode-level IDs
 - No rename without a validated plan
 - No bulk rename without a generated manifest
@@ -155,8 +200,9 @@ src/jellyfin_media_normalizer/
 
 Provider IDs are resolved in this priority order:
 
-1. **Embedded ID** — if the folder name already contains `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`,
-   that ID is used directly and no lookup is performed.
+1. **Embedded ID** — if a movie filename or TV series folder name already contains exactly one syntactically valid
+   provider ID compatible with that media type, that ID is selected and no cache or online lookup is performed.
+   Provider IDs elsewhere, multiple IDs, and episode-level IDs do not resolve an entity and require validation.
 2. **Cache** — the local JSON cache at `data/workspace/cache/provider_ids.json` is checked first for
    a matching lookup key.
 3. **Online API** — if the cache has no match and API keys are configured, clients are queried in this order:
@@ -235,5 +281,5 @@ After completion, the media library should have:
 - improved Jellyfin recognition through embedded provider IDs
 - a repeatable workflow for future library additions
 - a safe batch rename process with rollback capability
-- minimal filesystem clutter — no sidecar files, no embedded metadata
+- minimal filesystem clutter — no generated metadata sidecars and no embedded metadata changes
 - controlled handling of all uncertain or ambiguous cases

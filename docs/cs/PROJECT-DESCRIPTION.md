@@ -12,8 +12,8 @@ Hlavním účelem projektu je standardizovat názvy souborů a složek, zlepšit
 na řízené dávkové přejmenování bez zbytečného nepořádku v podobě metadat na disku.
 
 Projekt nepoužívá soubory `.nfo`. Identifikace v Jellyfinu bude místo toho vycházet z jediného ID poskytovatele
-uloženého v názvu hlavní složky filmu nebo seriálu ve formátu podporovaném Jellyfinem, například `[imdbid-tt...]`,
-`[tmdbid-...]` nebo `[tvdbid-...]`.
+uloženého v názvu souboru filmu nebo složky seriálu ve formátu podporovaném Jellyfinem, například
+`[imdbid-tt...]`, `[tmdbid-...]` nebo `[tvdbid-...]`.
 
 ## Rozsah
 
@@ -37,30 +37,62 @@ Projekt nezahrnuje:
 - automatické přejmenování bez ověření;
 - plnou automatizaci nejistých shod.
 
+## Rozložení a klasifikace knihovny
+
+Aplikace skenuje jeden nakonfigurovaný kořen knihovny, který může obsahovat filmy i televizní seriály. Kořen knihovny
+je neutrální kontejner a neklasifikuje se jako jeden z typů médií. Soubor filmu nebo složka seriálu přímo v kořeni
+zůstává zpracovatelná a může být připravena k plánování, ale obdrží neblokující varování, protože smíšený kořen není
+vhodným cílovým rozložením knihovny Jellyfinu.
+
+Složky pod kořenem se podle obsahu klasifikují jako filmové kolekce, kolekce seriálů, televizní seriály, sezóny nebo
+nekompatibilní složky. Klasifikovaná filmová kolekce nesmí obsahovat podstrom seriálu a klasifikovaná kolekce seriálů
+nesmí obsahovat filmové soubory. Název složky může přispět jako indicie, ale klasifikaci určuje obsah a struktura.
+
+Skenování sestupuje nejvýše pět adresářových úrovní pod nakonfigurovaný kořen. Kořen má hloubku nula a soubor
+nepřidává adresářovou úroveň. Obsah za tímto limitem se oznámí jako nekompatibilní, místo aby se tiše vynechal.
+
+Normalizované rozložení seriálu je striktní:
+
+```text
+Series Name [provider-id]/
+└── Season 01/
+    └── Episode Title S01E01 - CZ.ext
+```
+
+Složka seriálu obsahuje pouze normalizované složky sezón a složka sezóny obsahuje soubory epizod a jejich podporované
+související soubory bez další adresářové úrovně. Soubory epizod přímo ve vstupní složce seriálu lze opravit:
+jednoznačné `SxxExx` určí sezónu, zatímco číslo epizody bez sezóny navrhne `Season 01` a vyžádá kontrolu. Nejednoznačné
+číslování epizod vyžaduje kontrolu bez automatického plánu. Vnořené složky sezón a smíšený obsah filmů a seriálů jsou
+nekompatibilní a obdrží doporučení k nápravě.
+
+Položka, kterou lze bezpečně seskupit, ale má nejistá metadata, směřuje ke kontrole. Položka, jejíž vlastnictví nebo
+strukturální roli nelze určit, je nekompatibilní a nesmí vstoupit do výběru poskytovatele, schválení ani manifestu
+přejmenování. Soubory `.nfo` se vždy ignorují a nikdy nevstupují do doménového modelu ani samostatné operace se
+souborovým systémem. Smí se přesunout pouze jako obsah přejmenované nadřazené složky.
+
 ## Konvence názvů
 
 ### Filmy
 
 Názvy souborů filmů používají následující formát:
 
-- `Czech Title (Year) - CZ.ext`
-- `Czech Title (Year) - EN (tit. CZ).ext`
+- `Czech Title (Year) [imdbid-tt1234567] - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - EN (tit. CZ).ext`
 
-Název složky filmu obsahuje jediné ID poskytovatele:
-
-- `Czech Title (Year) [imdbid-tt1234567]`
-- `Czech Title (Year) [tmdbid-12345]`
-
-Uloží se pouze jedno ID podle vybraného doporučení poskytovatele.
+Film je videosoubor a nevyžaduje ani nevytváří vlastní filmovou složku. Organizační složky pro žánry a kolekce
+zůstávají čitelné a nedostávají ID poskytovatele. Podporovaný související soubor používá stejný základ názvu jako
+vlastnící video a přejmenuje se spolu s ním.
 
 ### Televizní seriály
 
-Název kořenové složky seriálu používá následující formát:
+Název složky seriálu používá následující formát:
 
 - `Series Name [tvdbid-12345]`
 - `Series Name [tmdbid-12345]`
 
 V názvu složky seriálu nebude uveden rok, protože by mohl být zavádějící nebo matoucí.
+
+Názvy složek sezón používají `Season XX`, například `Season 01`.
 
 Názvy souborů epizod neobsahují žádné ID poskytovatele:
 
@@ -69,23 +101,34 @@ Názvy souborů epizod neobsahují žádné ID poskytovatele:
 
 Jazykové značky používají standardní dvoupísmenné kódy: `CZ`, `EN`, `DE`, `SK`, `FR`, `IT`, `ES`.
 
+### Související soubory
+
+První vydání podporuje soubory titulků s příponami `.srt`, `.ass`, `.ssa`, `.vtt` a `.sub`. Titulky patří k videu,
+pokud používají stejný základ názvu nebo přidávají pouze rozpoznané jazykové a titulkové příznaky, například `cs`,
+`en`, `forced`, `sdh`, `cc` nebo `default`. Příznaky se při přejmenování zachovají. Osiřelé titulky a kolize cílových
+názvů vyžadují kontrolu.
+
+Ostatní typy souborů se jako samostatné položky ignorují a při přejmenování nadřazené složky v ní zůstanou. Soubor
+`.nfo` se nikdy samostatně nečte, neparsuje, nemodeluje, nevytváří, nemění, nemaže ani necílí operací manifestu. Smí
+se přesunout pouze jako ignorovaný obsah přejmenované nadřazené složky.
+
 ## Strategie metadat
 
 Projekt nepoužívá místní doprovodné soubory s metadaty, například `.nfo`, aby souborový systém při přímém procházení
 úložiště zůstal čitelný a přehledný.
 
-Identifikace v Jellyfinu se místo toho zlepší přidáním jediného ID poskytovatele pouze do názvu hlavní složky filmu
-nebo seriálu.
+Identifikace v Jellyfinu se místo toho zlepší přidáním jediného ID poskytovatele do názvu souboru filmu nebo složky
+seriálu.
 
 Priority poskytovatelů:
 
-- Filmy: primární vyhledání přes TMDb; do názvu složky se uloží jedno konečné vybrané ID.
+- Filmy: primární vyhledání přes TMDb; do názvu videosouboru se uloží jedno konečné vybrané ID.
 - Televizní seriály: online vyhledání nejprve přes TMDb TV a poté TVDB; do složky seriálu se uloží jedno konečné ID.
 - Epizody: bez vyhledání ID poskytovatele a bez ID v názvu souboru.
 
 ## Principy návrhu
 
-- Žádné soubory `.nfo`.
+- Žádné samostatné zpracování souborů `.nfo` ani operace manifestu pro ně.
 - Jedno ID poskytovatele pro film nebo televizní seriál; žádná ID na úrovni epizod.
 - Žádné přejmenování bez ověřeného plánu.
 - Žádné dávkové přejmenování bez vytvořeného manifestu.
@@ -154,8 +197,9 @@ src/jellyfin_media_normalizer/
 
 ID poskytovatelů se zjišťují v tomto pořadí:
 
-1. **Vložené ID** — pokud už název složky obsahuje `[imdbid-tt...]`, `[tmdbid-...]` nebo `[tvdbid-...]`,
-   toto ID se použije přímo a další vyhledávání neproběhne.
+1. **Vložené ID** — pokud název souboru filmu nebo složky seriálu obsahuje právě jedno syntakticky platné ID
+   poskytovatele slučitelné s daným typem média, toto ID se vybere a mezipaměť ani online vyhledávání se nepoužije.
+   ID na jiném místě, více ID a ID na úrovni epizody entitu nevyřeší a vyžadují ověření.
 2. **Mezipaměť** — nejprve se zkontroluje místní JSON mezipaměť v
    `data/workspace/cache/provider_ids.json` podle odpovídajícího vyhledávacího klíče.
 3. **Online API** — pokud mezipaměť neobsahuje shodu a jsou nastavené API klíče, klienti se dotazují v tomto pořadí:
@@ -233,5 +277,5 @@ Po dokončení by knihovna médií měla mít:
 - lepší rozpoznávání v Jellyfinu pomocí vložených ID poskytovatelů;
 - opakovatelný workflow pro budoucí přírůstky knihovny;
 - bezpečný proces dávkového přejmenování s možností vrácení změn;
-- minimální nepořádek v souborovém systému — bez doprovodných souborů a vložených metadat;
+- minimální nepořádek v souborovém systému — bez generovaných metadatových souborů a změn vložených metadat;
 - řízené zpracování všech nejistých a nejednoznačných případů.
