@@ -1,0 +1,64 @@
+name: CI
+
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.2"
+          python-version: "3.14"
+          enable-cache: true
+
+      - name: Synchronize dependencies
+        run: uv sync --locked
+
+      - name: Check dependency lock
+        run: uv lock --check
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Run linting
+        run: uv run ruff check .
+
+      - name: Run type checking
+        run: uv run pyright
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Check TOML
+        run: uv run pre-commit run check-toml --all-files
+
+      - name: Lint YAML
+        run: uv run pre-commit run yamllint --all-files
+
+      - name: Check merge conflicts
+        run: uv run pre-commit run check-merge-conflict --all-files
+
+      - name: Check large files
+        run: uv run pre-commit run check-added-large-files --all-files
+
+      - name: Lint Markdown
+        run: uv run pre-commit run markdownlint --all-files
