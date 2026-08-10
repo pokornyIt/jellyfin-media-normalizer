@@ -1,0 +1,109 @@
+name: PR linked issue
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  linked-issue:
+    name: Linked issue
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate linked issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const body = context.payload.pull_request.body ?? '';
+
+            /*
+             * Require a supported relationship followed by a local issue number:
+             *
+             *   Fixes #123
+             *   Closes #123
+             *   Resolves #123
+             *   Related to #123
+             *
+             * Case-insensitive.
+             */
+            const matches = [
+              ...body.matchAll(
+                /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|related\s+to)\s+#(\d+)\b/gi
+              ),
+            ];
+
+            if (matches.length === 0) {
+              core.setFailed(
+                'Pull request must reference an open issue using "Fixes #<number>", ' +
+                '"Closes #<number>", "Resolves #<number>", or "Related to #<number>".'
+              );
+              return;
+            }
+
+            const issueNumbers = [
+              ...new Set(matches.map((match) => Number(match[1]))),
+            ];
+
+            const validIssues = [];
+
+            for (const issueNumber of issueNumbers) {
+              let issue;
+
+              try {
+                const response = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                });
+
+                issue = response.data;
+              } catch (error) {
+                if (error.status === 404) {
+                  core.info(`Issue #${issueNumber} does not exist.`);
+                  continue;
+                }
+
+                throw error;
+              }
+
+              /*
+               * GitHub's Issues API also returns pull requests.
+               * Reject those explicitly.
+               */
+              if (issue.pull_request) {
+                core.info(`#${issueNumber} is a pull request, not an issue.`);
+                continue;
+              }
+
+              if (issue.state !== 'open') {
+                core.info(`Issue #${issueNumber} is not open.`);
+                continue;
+              }
+
+              validIssues.push(issueNumber);
+            }
+
+            if (validIssues.length === 0) {
+              core.setFailed(
+                'Pull request must reference at least one existing open issue ' +
+                'in this repository.'
+              );
+              return;
+            }
+
+            core.info(
+              `Valid linked issue(s): ${validIssues
+                .map((number) => `#${number}`)
+                .join(', ')}`
+            );
