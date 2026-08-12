@@ -123,6 +123,8 @@ chore(deps): bump black from 24.2 to 24.8
 
 ## Pravidla pro pull requesty a issues
 
+- Před implementací změny určené pro `main` vyhledej existující otevřené issue, které práci vymezuje. Pokud odpovídající
+  issue neexistuje, založ jej před úpravou souborů repozitáře.
 - Každá změna začleněná do `main` musí projít přes pull request.
 - Každý pull request směřující do `main` musí odkazovat alespoň na jedno existující otevřené issue tohoto repozitáře.
 - Pokud merge dokončí issue, uveď v popisu pull requestu `Closes #123`. GitHub po mergi do výchozí větve issue uzavře.
@@ -131,9 +133,14 @@ chore(deps): bump black from 24.2 to 24.8
 - Používej prosté reference jako `#123`; GitHub z nich vytvoří odkaz automaticky. Nevytvářej kolem čísla issue ruční
   Markdown odkaz.
 - Ověř, že odkazované issue existuje a odpovídá změně. Číslo issue nikdy nehádej ani nevymýšlej.
-- Názvy pull requestů používají stejný anglický formát Conventional Commit subjectu jako tento dokument.
-- Jednotlivé pracovní commity odkaz na issue nevyžadují. Footer commitu může issue uvést, pokud to zlepšuje kontext,
-  ale povinnou dohledatelnost zajišťuje pull request.
+- Názvy pull requestů používají formát `<Conventional Commit subject> (#<primary-issue-number>)`, například:
+  `feat(parser): add movie filename parser (#123)`.
+- Suffix primárního issue musí označovat existující otevřené issue a odpovídat podporované vazbě na stejné issue v
+  těle pull requestu.
+- Pokud pull request odkazuje na více issues, vyber jedno primární issue pro suffix názvu a všechny vazby ponech v
+  těle pull requestu.
+- Jednotlivé pracovní commity suffix `(#<issue-number>)` nepoužívají. Footer commitu může issue uvést, pokud to
+  zlepšuje kontext, ale povinnou dohledatelnost zajišťuje pull request.
 - Při squash mergi může výsledný commit obsahovat číslo pull requestu doplněné GitHubem. `Closes #123` ponech v popisu
   pull requestu místo vynucování čísla issue v každém commit subjectu.
 

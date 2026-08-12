@@ -1,3 +1,5 @@
+<!-- Required title: <Conventional Commit subject> (#<primary-issue-number>) -->
+
 ## Summary
 
 <!-- Describe what changed and why. -->
@@ -6,6 +8,7 @@
 
 <!--
 Every pull request targeting main must link an existing open issue from this repository.
+The primary issue must match the "(#<issue-number>)" suffix in the pull request title.
 Use "Closes #123" when this pull request completes the issue.
 For partial work, link the pull request through GitHub's Development section and use "Related to #123".
 -->
