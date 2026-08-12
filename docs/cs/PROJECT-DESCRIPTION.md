@@ -83,6 +83,25 @@ Film je videosoubor a nevyžaduje ani nevytváří vlastní filmovou složku. Or
 zůstávají čitelné a nedostávají ID poskytovatele. Podporovaný související soubor používá stejný základ názvu jako
 vlastnící video a přejmenuje se spolu s ním.
 
+Oficiální `Part 1` nebo `Part 2` v názvu filmu zůstává součástí zobrazovaného názvu, pokud mají vydání odlišné identity
+poskytovatele. Jeden film fyzicky rozdělený do více souborů místo toho používá koncovou značku části:
+
+- `Czech Title (Year) [tmdbid-12345] - CD1 - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - CD2 - CZ.ext`
+
+Číslování částí musí začínat jedničkou a být souvislé. Samotná značka `Part` nikdy nedokazuje, že soubory patří k
+jednomu filmu; části se od samostatných vydání musí odlišit identitou poskytovatele nebo explicitním potvrzením
+operátora.
+
+Alternativní verze zůstávají samostatnými soubory pod jednou entitou filmu a jedním vybraným ID poskytovatele. Jejich
+řízené označení edice předchází jazykové značce, například:
+
+- `Czech Title (Year) [tmdbid-12345] - Director's Cut - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - Theatrical - EN (tit. CZ).ext`
+
+Více souborů se stejným názvem, rokem a poskytovatelem vyžaduje kontrolu před označením jako části, alternativní verze,
+duplicity nebo různé filmy.
+
 ### Televizní seriály
 
 Název složky seriálu používá následující formát:
@@ -90,9 +109,18 @@ Název složky seriálu používá následující formát:
 - `Series Name [tvdbid-12345]`
 - `Series Name [tmdbid-12345]`
 
-V názvu složky seriálu nebude uveden rok, protože by mohl být zavádějící nebo matoucí.
+Normalizovaná složka seriálu nikdy neobsahuje rok vydání ani první premiéry. Koncový rok ve vstupní složce se použije
+pro vyhledávání a kontrolu a odstraní se až po výběru a schválení identity poskytovatele. Remaky se stejným
+zobrazovaným názvem rozlišuje ID poskytovatele.
+
+Čísla, která jsou součástí skutečného názvu, například `1899`, `1923`, `11.22.63` nebo `Catch-22`, zůstávají beze
+změny. Nejednoznačné číslo vyžaduje kontrolu. Roky se nikdy nepřidávají do složek sezón ani názvů souborů epizod.
 
 Názvy složek sezón používají `Season XX`, například `Season 01`.
+
+Seriálové speciály používají `Season 00` a `S00E##`. Patří seriálu a nikdy nedostávají ID poskytovatele. Jeden soubor
+obsahující více epizod používá explicitní rozsah, například `S01E01-E02`. Vícedílné příběhy uložené jako samostatně
+číslované epizody zůstávají samostatnými epizodami; `Part 1` a `Part 2` zůstávají v jejich zobrazovaných názvech.
 
 Názvy souborů epizod neobsahují žádné ID poskytovatele:
 
@@ -100,6 +128,16 @@ Názvy souborů epizod neobsahují žádné ID poskytovatele:
 - `Czech Episode Title S01E02 - EN (tit. CZ).ext`
 
 Jazykové značky používají standardní dvoupísmenné kódy: `CZ`, `EN`, `DE`, `SK`, `FR`, `IT`, `ES`.
+
+### Zobrazované názvy
+
+Zobrazovaný název se vybírá v tomto pořadí: operátorem schválený název, český lokalizovaný název vybraného
+poskytovatele, existující název ze souborového systému a původní název poskytovatele. Poslední možnost vyžaduje
+kontrolu.
+
+Zobrazovaný název zachovává diakritiku, členy, interpunkci a pořadí slov vybraného zdroje. Normalizace pro vyhledávání
+zobrazovaný text nikdy nepřepisuje. Ručně schválený název přetrvá další skeny, zatímco změna vybraného poskytovatele
+znovu otevře kontrolu názvu.
 
 ### Související soubory
 
@@ -111,6 +149,10 @@ názvů vyžadují kontrolu.
 Ostatní typy souborů se jako samostatné položky ignorují a při přejmenování nadřazené složky v ní zůstanou. Soubor
 `.nfo` se nikdy samostatně nečte, neparsuje, nemodeluje, nevytváří, nemění, nemaže ani necílí operací manifestu. Smí
 se přesunout pouze jako ignorovaný obsah přejmenované nadřazené složky.
+
+Video rozpoznané jako bonus nebo extra vyžaduje kontrolu. Operátor je může klasifikovat jako film, seriálový speciál
+nebo ignorovaný obsah. Ignorované bonusy nedostanou ID poskytovatele ani samostatnou operaci manifestu a smějí se
+přesunout pouze jako obsah přejmenované nadřazené složky.
 
 ## Strategie metadat
 
@@ -126,6 +168,38 @@ Priority poskytovatelů:
 - Televizní seriály: online vyhledání nejprve přes TMDb TV a poté TVDB; do složky seriálu se uloží jedno konečné ID.
 - Epizody: bez vyhledání ID poskytovatele a bez ID v názvu souboru.
 
+### Zásady výběru poskytovatele
+
+Kandidáti poskytovatele se skórují nezávisle na jistotě parseru a skupiny entity. Automatický výběr je povolen jen
+pro strukturálně platnou entitu s vysokou jistotou, odpovídajícím typem média, ID platným pro poskytovatele a bez
+konfliktu s vloženým nebo ručně schváleným výběrem. Platné vložené ID a explicitní ruční výběr mají před skórováním
+kandidátů přednost.
+
+Při spolehlivém zdrojovém roku používá skóre kandidáta 80 % podobnosti normalizovaného názvu a 20 % shody roku.
+Přesný rok má hodnotu `1.0`, rozdíl jednoho roku `0.5` a větší rozdíl nebo chybějící rok kandidáta `0.0`. Filmy pro
+automatický výběr vyžadují přesný rok. Seriály vyžadují přesný vstupní rok, pokud byl spolehlivě parsován; bez něj
+odpovídá jejich běžné skóre podobnosti názvu.
+
+Automatický výběr vyžaduje skóre `0.92`, podobnost názvu `0.90` a náskok `0.08` před druhým kandidátem stejného
+poskytovatele. Jediný kandidát vyžaduje skóre i podobnost názvu `0.97`. Pořadí API, popularita, grafika, dostupnost
+přehledu a úplnost metadat nepřispívají ke skóre identity.
+
+Seriál bez roku může použít názvy epizod od poskytovatele jako další důkaz, pokud nestačí skórování samotného názvu.
+Deterministicky se vyberou až tři vhodné epizody jako první, prostřední a poslední použitelná epizoda, pokud možno
+z různých řad. Jsou potřeba alespoň dva vzorky s použitelnými názvy epizod. Speciály, `Season 00`, vícedílné soubory,
+soubory s více epizodami a nerozpoznatelné epizody se vynechají.
+
+Každá vybraná kombinace řady a epizody musí u kandidáta existovat a každý název musí mít podobnost alespoň `0.85`
+s lokalizovaným nebo původním názvem epizody od poskytovatele. Potvrzené skóre používá 75 % podobnosti názvu seriálu
+a 25 % průměrné podobnosti názvů epizod. Vyžaduje podobnost názvu seriálu `0.85`, konečné skóre `0.92`, běžný náskok
+`0.08` a žádný konflikt ve vzorku. Vyhledání epizod poskytuje pouze důkaz identity seriálu a nikdy nevytváří ID
+poskytovatele na úrovni epizody.
+
+Automatický výběr poskytovatele vytvoří stav `ready_for_approval`, nikoli schválení přejmenování. Ruční změny jsou
+explicitní a auditovatelné. Prahy jsou pojmenované a verzované konstanty zásad, které operátor v prvním vydání
+nemůže snížit. Výběry z mezipaměti lze automaticky znovu použít jen tehdy, pokud byly dříve schváleny podle stejné
+verze zásad a vstupy identity se nezměnily; ostatní výsledky vyžadují nové skórování nebo kontrolu.
+
 ## Principy návrhu
 
 - Žádné samostatné zpracování souborů `.nfo` ani operace manifestu pro ně.
@@ -136,6 +210,86 @@ Priority poskytovatelů:
 - Vedlejší účinky jsou izolovány ve vrstvě executorů.
 - Nejednoznačné položky a položky s nízkou mírou jistoty vždy směřují ke kontrole a nikdy se nezpracují automaticky.
 - Prioritou je čitelná struktura souborového systému.
+- Symbolické odkazy se vždy odmítnou a nikdy se nenásledují, nemodelují, neplánují ani nepřejmenovávají.
+
+## Bezpečnost stavu zdroje
+
+Každý běžný zdrojový soubor v manifestu přejmenování má povinný otisk obsahující relativní cestu, typ položky,
+velikost a čas změny s přesností poskytnutou souborovým systémem. První vydání nehashuje celý obsah médií a jako pole
+identity nepoužívá číslo inode, čas vytvoření, vlastníka ani oprávnění.
+
+Přejmenovávaná složka používá stromový SHA-256 digest nad kanonicky seřazenou inventurou. Každý potomek přispívá
+relativní cestou a typem položky; spravované běžné soubory také velikostí a časem změny. Ignorovaní potomci včetně
+`.nfo` přispívají pouze neprůhledným členstvím a nikdy se neotevírají, neparsují, nemodelují ani nedostávají samostatný
+záznam manifestu. Symbolický odkaz je vždy neplatný, nikdy se nenásleduje a svou přítomností vyloučí obsahující složku
+z plánování a provedení.
+
+Manifest má samostatný SHA-256 digest kanonické serializace. Dry-run platí pouze pro přesný digest manifestu a shodné
+otisky zdrojů. Stav zdrojů se znovu ověřuje při dry-run, bezprostředně před každou dávkou a před každou operací. Každý
+rozdíl zastaví celý běh provádění a vyžaduje nové skenování, analýzu, schválení, manifest a dry-run. Existence cílů a
+kolize se kontrolují nezávisle při plánování, dry-run i provedení.
+
+## Částečné selhání a rollback
+
+První neúspěšné přejmenování zastaví celý běh provádění. Aplikace se nepokusí o automatický rollback. Trvalý audit
+místo toho rozliší potvrzené úspěšné, neúspěšné, čekající a nejisté operace. Pouze potvrzené úspěšné operace se v
+opačném pořadí provedení obrátí do neměnného JSON manifestu rollbacku.
+
+Každá položka rollbacku odkazuje na původní operaci a obsahuje současnou zdrojovou cestu, původní cílovou cestu,
+otisk zdroje, očekávanou nepřítomnost cíle, pořadí a důvod obnovy. Manifest zaznamenává své schéma a druh, původní běh
+a digest manifestu, čas vytvoření a vlastní SHA-256 digest. Ukládá strukturovaná data, nikoli shellové příkazy.
+
+Rollback zpracovává běžný executor manifestu. Stav zdroje a nepřítomnost cíle se znovu ověří, dry-run je povinný,
+skutečný rollback vyžaduje explicitní potvrzení a každý výsledek se zapíše do samostatného auditu. Rollback nikdy
+nepřepíše existující cestu ani nezmění svůj manifest. Operátor může místo něj zachovat dokončené operace a vytvořit
+nové workflow pro zbývající položky.
+
+## Počáteční nasazení webového UI
+
+První webové UI je neautentizovaná aplikace pro jediného operátora na důvěryhodném počítači nebo privátní LAN.
+Adresa naslouchání je konfigurovatelná a má výchozí hodnotu `0.0.0.0`, aby prohlížeč Windows dosáhl na aplikaci
+spuštěnou ve WSL nebo kontejneru. Naslouchání mimo loopback zobrazí upozornění, ale nebrání spuštění. Dostupná
+důvěryhodná zařízení určují pravidla firewallu hostitele a publikování portu v Compose.
+
+Počáteční UI podporuje nastavení, analýzu, kontrolu, opravy, schvalování, náhled manifestu, historii auditu a dry-run.
+Nemá endpoint pro skutečné provedení přejmenování. Skutečné změny souborového systému zůstávají pouze v CLI a nadále
+vyžadují ověřený manifest, úspěšný dry-run a samostatné explicitní potvrzení. Změnové trasy UI nikdy nepoužívají
+metodu `GET`.
+
+Vystavení veřejnému internetu a nedůvěryhodné síti není podporované. Autentizace, účty, role, session, ochrana CSRF,
+TLS spravované aplikací, návod k HTTPS reverse proxy a zabezpečení vzdáleného přístupu jsou pozdější nadstavby.
+Integrace se Synology účtem je volitelná a první podporované nasazení ji nevyžaduje.
+
+## Podpora architektur kontejneru
+
+Projekt oficiálně sestavuje, kontroluje smoke testem a publikuje kontejnerové obrazy pouze pro `linux/amd64`. Tato
+platforma pokrývá vývojové prostředí WSL `x86_64` i obě cílová zařízení NAS: Synology DS925+ s AMD Ryzen V1500B a
+Synology DS723+ s AMD Ryzen R1600.
+
+První vydání nepublikuje obrazy ARM, 32bitové ani multi-platformní obrazy. Compose nenastavuje `platform`, takže
+nepodporovaný hostitel skončí běžnou chybou Dockeru pro nekompatibilní obraz místo skrytého použití emulace AMD64.
+
+Dockerfile zůstává prakticky přenositelný. Pokročilá dokumentace bude obsahovat příklady nativního `docker build` a
+volitelného sestavení jediné platformy přes `docker buildx build` pro uživatele, kteří chtějí vyzkoušet jinou
+architekturu. Taková sestavení jsou best-effort, projekt je v release netestuje a oficiálně je nepodporuje ani
+nepublikuje.
+
+## Přístup Compose pro zápis
+
+Běžné `docker compose up` spustí pouze dlouhodobou službu `app`. Ta připojí knihovnu médií explicitně jako
+`/media:ro` a používá trvalý zapisovatelný `/workspace`. Webová služba nikdy nedostane zapisovatelný přístup k médiím.
+
+Skutečné přejmenování a rollback používají samostatnou jednorázovou službu `executor` v profilu `execution`. Připojí
+`/media:rw`, nemá síť ani webový port, používá `restart: "no"` a po dokončení příkazu se odstraní. Dokumentované
+spuštění má následující tvar:
+
+```bash
+docker compose --profile execution run --rm executor <command> <explicit-execution-flag>
+```
+
+Compose uvádí `:ro` a `:rw` přímo; žádná proměnná prostředí nepřepíná režim mountu médií. Před každou změnou executor
+získá globální execution lock ve workspace. Zapisovatelný mount ani lock neobcházejí požadavky na integritu manifestu,
+otisky zdrojů, bezpečnost cílů, úspěšný dry-run, explicitní potvrzení, zastavení při chybě, rollback ani audit.
 
 ## Implementace
 
@@ -216,7 +370,7 @@ Položky klasifikované jako `unknown` se zcela přeskočí.
 | 2   | Klasifikace                           | ✅ Implementováno |
 | 3   | Normalizace názvů                     | ✅ Implementováno |
 | 4   | Ověření                               | ✅ Implementováno |
-| 5   | Vyhledání ID poskytovatele            | ✅ Implementováno |
+| 5   | Vyhledání ID poskytovatele            | 🚧 Částečně       |
 | 6   | Plánování přejmenování (manifest)     | ⏳ Plánováno      |
 | 7   | Dávkové provedení přejmenování        | ⏳ Plánováno      |
 | 8   | Kontrolní workflow (HTML/CSV sestavy) | ⏳ Plánováno      |
@@ -252,6 +406,10 @@ popsaného výše v části [Zjišťování ID poskytovatele](#zjišťování-id
 Výsledkem každé nalezené položky je objekt `ProviderMatch` obsahující `provider`, `provider_id`, `confidence`, `reason`
 a `lookup_key`. Položky bez shody se zapíší do sestavy nevyřešených položek.
 
+Současný online resolver přijímá první vrácený výsledek s pevnou jistotou. Více kandidátů, vysvětlitelné skórování,
+prahy nejednoznačnosti, potvrzení názvy epizod, verzované opětovné použití mezipaměti a trvalý původ výběru je nutné
+teprve implementovat, aby tato fáze splnila produktové zásady.
+
 #### Fáze 6 — Plánování přejmenování *(plánováno)*
 
 Před jakoukoli změnou souborového systému se vytvoří manifest přejmenování. Bude obsahovat původní cestu, typ média,
@@ -262,7 +420,8 @@ Výchozím režimem bude dry-run. Skutečné provedení bude vyžadovat explicit
 #### Fáze 7 — Dávkové provedení přejmenování *(plánováno)*
 
 Přejmenování se provede v logických dávkách, tedy filmy po složkách a seriály po jednotlivých pořadech, až po kontrole
-manifestu. Executor bude podporovat protokolování, detekci kolizí a možnost vrácení změn.
+manifestu. Executor bude podporovat audit, detekci kolizí, okamžité zastavení při chybě a explicitní rollback přes
+neměnný obrácený manifest. Automatický rollback není podporovaný.
 
 #### Fáze 8 — Kontrolní workflow *(plánováno)*
 

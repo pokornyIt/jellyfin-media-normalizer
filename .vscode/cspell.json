@@ -42,7 +42,8 @@
                 "footeru",
                 "changelogu",
                 "pyrightu",
-                "ticové","githubem"
+                "ticové",
+                "githubem"
             ],
             "words": [
                 "parsování",
@@ -87,7 +88,12 @@
                 "socketu",
                 "fixturech",
                 "videosouborů",
-                "requestu","requestů","subjectu","commity","dohledatelnost","mergi"
+                "requestu",
+                "requestů",
+                "subjectu",
+                "commity",
+                "dohledatelnost",
+                "mergi"
             ]
         }
     ],
@@ -124,6 +130,7 @@
         "pathlib",
         "Pokorny",
         "Pydantic",
+        "pydocstyle",
         "pyproject",
         "pytest",
         "pythonpath",

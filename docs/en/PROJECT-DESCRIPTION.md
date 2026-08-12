@@ -86,6 +86,24 @@ A movie is a video file and does not require or create a dedicated movie folder.
 and collections remain readable and do not receive provider IDs. A supported associated file uses the same filename
 stem as its owning video and is renamed with it.
 
+An official `Part 1` or `Part 2` in the movie title remains part of the display title when the releases have distinct
+provider identities. One movie physically split across multiple files instead uses a terminal component marker:
+
+- `Czech Title (Year) [tmdbid-12345] - CD1 - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - CD2 - CZ.ext`
+
+Component numbering must start at one and remain contiguous. A `Part` marker alone never proves that files belong to
+one movie; provider identity or explicit operator confirmation must distinguish components from separate releases.
+
+Alternate versions remain separate files under one movie entity and one selected provider ID. Their controlled
+edition label precedes the language marker, for example:
+
+- `Czech Title (Year) [tmdbid-12345] - Director's Cut - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - Theatrical - EN (tit. CZ).ext`
+
+Multiple files with the same title, year, and provider require review before they can be classified as components,
+alternate versions, duplicates, or distinct movies.
+
 ### TV Series
 
 The TV series folder name uses the following format:
@@ -93,9 +111,18 @@ The TV series folder name uses the following format:
 - `Series Name [tvdbid-12345]`
 - `Series Name [tmdbid-12345]`
 
-No year will be used in the TV series folder name, because it may be misleading or confusing.
+The normalized TV series folder never includes a release or first-air year. A terminal year in an input folder is
+used for lookup and review, then removed only after the provider identity is selected and approved. The provider ID
+distinguishes remakes with the same display title.
+
+Numbers that are part of the actual title, such as `1899`, `1923`, `11.22.63`, or `Catch-22`, remain unchanged. An
+ambiguous number requires review. Years are never added to season folders or episode filenames.
 
 Season folder names use `Season XX`, for example `Season 01`.
+
+TV specials use `Season 00` and `S00E##`. They belong to the series and never receive a provider ID. A single file
+containing multiple episodes uses an explicit range such as `S01E01-E02`. Multi-part stories stored as separately
+numbered episodes remain separate episodes; `Part 1` and `Part 2` remain part of their display titles.
 
 Episode filenames do not contain any provider ID:
 
@@ -103,6 +130,15 @@ Episode filenames do not contain any provider ID:
 - `Czech Episode Title S01E02 - EN (tit. CZ).ext`
 
 Language markers use standard two-letter codes: `CZ`, `EN`, `DE`, `SK`, `FR`, `IT`, `ES`.
+
+### Display Titles
+
+The display title is selected in this order: an operator-approved title, the selected provider's Czech localized
+title, the existing filesystem title, and the provider's original title. The last fallback requires review.
+
+Display titles preserve diacritics, articles, punctuation, and word order from their selected source. Lookup
+normalization never rewrites display text. A manually approved title persists across later scans, while changing the
+selected provider reopens title review.
 
 ### Associated Files
 
@@ -114,6 +150,10 @@ and target-name collisions require review.
 Other file types are ignored as individual items and remain inside a directory when that parent directory is
 renamed. An `.nfo` file is never read, parsed, modeled, created, modified, deleted, or targeted by a standalone
 manifest operation. It may move only as ignored content of a renamed parent directory.
+
+A video recognized as a bonus or extra requires review. The operator may classify it as a movie, TV special, or
+ignored content. Ignored extras receive no provider ID or standalone manifest operation and may move only as content
+of a renamed parent directory.
 
 ## Metadata Strategy
 
@@ -129,6 +169,38 @@ Provider priority:
 - TV Series: online lookup order is TMDb TV first, then TVDB; one final selected ID is stored in the series folder name
 - Episodes: no provider ID lookup; no ID stored in the filename
 
+### Provider Selection Policy
+
+Provider candidates are scored independently of parser and entity-group confidence. Automatic selection is allowed
+only for a structurally valid, high-confidence entity with a matching media type, a provider-valid ID, and no
+conflict with an embedded or manually approved selection. A valid embedded ID and an explicit manual selection take
+precedence over candidate scoring.
+
+With a reliable source year, the candidate score uses 80% normalized title similarity and 20% year agreement. An
+exact year scores `1.0`, a one-year difference scores `0.5`, and a larger difference or missing candidate year scores
+`0.0`. Movies require an exact year for automatic selection. TV series require an exact input year when one was
+reliably parsed; without one, their normal score equals title similarity.
+
+Automatic selection requires score `0.92`, title similarity `0.90`, and a `0.08` lead over the second candidate from
+the same provider. A sole candidate requires score and title similarity `0.97`. API ordering, popularity, artwork,
+overview availability, and metadata completeness do not contribute to identity scoring.
+
+A yearless TV series may use provider episode titles as additional evidence when title-only scoring is insufficient.
+Up to three suitable episodes are sampled deterministically as the first, middle, and last usable episode, preferably
+across different seasons. At least two samples with usable episode titles are required. Specials, `Season 00`,
+multipart or multi-episode files, and unparseable episodes are excluded.
+
+Every sampled season and episode coordinate must exist for the candidate, and every sampled title must have at least
+`0.85` similarity to a localized or original provider episode title. The corroborated score uses 75% series-title
+similarity and 25% average episode-title similarity. It requires series-title similarity `0.85`, final score `0.92`,
+the normal `0.08` lead, and no sampled conflict. Episode lookup provides series-level identity evidence only and
+never creates an episode provider ID.
+
+Automatic provider selection produces `ready_for_approval`, not rename approval. Manual overrides are explicit and
+auditable. The thresholds are named, versioned policy constants that operators cannot lower in the first release.
+Cached selections are automatically reusable only when previously approved under the same policy version with
+unchanged identity inputs; other cached results require rescoring or review.
+
 ## Design Principles
 
 - No standalone `.nfo` processing or manifest operations
@@ -139,6 +211,87 @@ Provider priority:
 - Side effects are isolated to the executor layer
 - Ambiguous or low-confidence items are always routed to review, never automated
 - Readable filesystem structure is the priority
+- Symbolic links are always rejected and never followed, modeled, planned, or renamed
+
+## Source-State Safety
+
+Every regular source file in a rename manifest has a required fingerprint containing its relative path, entry type,
+size, and modification time at the precision reported by the filesystem. The first release does not hash complete
+media content and does not use inode number, creation time, ownership, or permissions as identity fields.
+
+A renamed directory uses a SHA-256 tree digest over a canonically sorted inventory. Every descendant contributes its
+relative path and entry type; managed regular files also contribute size and modification time. Ignored children,
+including `.nfo`, contribute only opaque membership and are never opened, parsed, modeled, or assigned a standalone
+manifest entry. A symbolic link is always invalid, is never followed, and blocks its containing directory from
+planning and execution.
+
+The manifest has a separate SHA-256 digest over its canonical serialization. Dry-run is valid only for the exact
+manifest digest and matching source fingerprints. Source state is revalidated during dry-run, immediately before
+each batch, and before every operation. Any mismatch stops the complete execution run and requires a new scan,
+analysis, approval, manifest, and dry-run. Target existence and collision checks are independent and repeat at
+planning, dry-run, and execution boundaries.
+
+## Partial Failure And Rollback
+
+The first failed rename stops the complete execution run. The application does not attempt automatic rollback.
+Instead, its durable audit identifies confirmed successful, failed, pending, and uncertain operations. Only confirmed
+successful operations are reversed, in reverse execution order, into an immutable JSON rollback manifest.
+
+Each rollback entry links to the original operation and contains the current source path, original target path,
+source fingerprint, expected absent target, sequence, and recovery reason. The manifest records its schema and kind,
+the original run and manifest digest, creation time, and its own SHA-256 digest. It stores structured data rather than
+shell commands.
+
+The normal manifest executor handles rollback. Source state and target absence are validated again, dry-run is
+mandatory, real rollback requires explicit confirmation, and every result is written to a separate audit. Rollback
+never overwrites an existing path or mutates its manifest. The operator may instead preserve completed operations and
+create a new workflow for the remaining items.
+
+## Initial Web UI Deployment
+
+The first web UI is an unauthenticated single-operator application for a trusted machine or private LAN. The bind
+address is configurable and defaults to `0.0.0.0` so a Windows browser can reach an application running in WSL or a
+container. Listening outside loopback emits a warning but does not prevent startup. Host firewall rules and Compose
+port publishing define which trusted devices can connect.
+
+The initial UI supports setup, analysis, review, correction, approval, manifest preview, audit history, and dry-run.
+It has no endpoint for real rename execution. Actual filesystem changes remain CLI-only and still require a validated
+manifest, successful dry-run, and separate explicit confirmation. State-changing UI routes never use `GET`.
+
+Public Internet and untrusted-network exposure are unsupported. Authentication, accounts, roles, sessions, CSRF
+protection, application-managed TLS, HTTPS reverse-proxy guidance, and remote-access hardening are later add-ons.
+Synology account integration is optional and is not required for the first supported deployment.
+
+## Container Architecture Support
+
+The project officially builds, smoke-tests, and publishes only `linux/amd64` container images. This platform covers
+the `x86_64` WSL development environment and both target NAS devices: Synology DS925+ with AMD Ryzen V1500B and
+Synology DS723+ with AMD Ryzen R1600.
+
+The first release does not publish ARM, 32-bit, or multi-platform images. Compose does not set `platform`, so an
+unsupported host fails with Docker's normal incompatible-image error instead of silently using AMD64 emulation.
+
+The Dockerfile remains portable where practical. Advanced documentation will include native `docker build` and
+optional single-platform `docker buildx build` examples for users who want to try another architecture. Such builds
+are best-effort, receive no project release testing, and are not officially supported or published.
+
+## Compose Write Access
+
+Normal `docker compose up` starts only the long-running `app` service. It mounts the media library explicitly at
+`/media:ro` and uses a persistent writable `/workspace`. The web service never receives writable media access.
+
+Real rename and rollback execution use a separate one-shot `executor` service in the `execution` profile. It mounts
+`/media:rw`, has no network or web port, uses `restart: "no"`, and is removed after the command completes. The
+documented invocation has the following form:
+
+```bash
+docker compose --profile execution run --rm executor <command> <explicit-execution-flag>
+```
+
+Compose records `:ro` and `:rw` literally; an environment variable never switches the media mount mode. Before any
+mutation, the executor acquires a global execution lock in the workspace. The writable mount and lock do not bypass
+manifest integrity, source fingerprint, target safety, successful dry-run, explicit confirmation, stop-on-failure,
+rollback, or audit requirements.
 
 ## Implementation
 
@@ -219,7 +372,7 @@ Items classified as `unknown` are skipped entirely.
 | 2   | Classification                        | ✅ Implemented |
 | 3   | Name normalization                    | ✅ Implemented |
 | 4   | Validation                            | ✅ Implemented |
-| 5   | Provider ID lookup                    | ✅ Implemented |
+| 5   | Provider ID lookup                    | 🚧 Partial     |
 | 6   | Rename planning (manifest generation) | ⏳ Planned     |
 | 7   | Batch rename execution                | ⏳ Planned     |
 | 8   | Review workflow (HTML/CSV reports)    | ⏳ Planned     |
@@ -256,6 +409,10 @@ in the [Provider ID Resolution](#provider-id-resolution) section above.
 The result for each resolved item is a `ProviderMatch` object containing: `provider`, `provider_id`, `confidence`,
 `reason`, and `lookup_key`. Items without a match are written to the unresolved report.
 
+The current online resolver accepts the first returned result with fixed confidence. Multiple candidates,
+explainable scoring, ambiguity thresholds, episode-title corroboration, policy-versioned cache reuse, and persisted
+selection provenance remain to be implemented before this phase satisfies the product policy.
+
 #### Phase 6 — Rename Planning *(planned)*
 
 A rename manifest will be generated before any filesystem change is made. It will contain: original path, media type,
@@ -266,7 +423,8 @@ Dry-run mode will be the default. Actual execution requires an explicit opt-in f
 #### Phase 7 — Batch Rename Execution *(planned)*
 
 Renames will be executed in logical batches (movies by folder, TV series one show at a time) only after the manifest
-has been reviewed. The executor will support execution logging, collision detection, and rollback capability.
+has been reviewed. The executor will support audit logging, collision detection, immediate stop on failure, and
+explicit rollback through an immutable reverse manifest. Automatic rollback is not supported.
 
 #### Phase 8 — Review Workflow *(planned)*
 
