@@ -1,0 +1,59 @@
+name: Guard parent issue close
+
+on:
+  issues:
+    types:
+      - closed
+
+permissions:
+  issues: write
+
+jobs:
+  check-sub-issues:
+    name: Check sub-issues
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Reopen parent with open sub-issues
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const subIssues = await github.paginate(
+              'GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues',
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              }
+            );
+            const openSubIssues = subIssues.filter(
+              (subIssue) => subIssue.state === 'open'
+            );
+
+            if (openSubIssues.length === 0) {
+              core.info(`Issue #${issueNumber} has no open sub-issues.`);
+              return;
+            }
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'open',
+            });
+
+            const references = openSubIssues
+              .map((subIssue) => `#${subIssue.number}`)
+              .join(', ');
+            const description = openSubIssues.length === 1
+              ? 'sub-issue remains open'
+              : 'sub-issues remain open';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `⚠️ Reopened: ${openSubIssues.length} ${description}: ${references}.`,
+            });
