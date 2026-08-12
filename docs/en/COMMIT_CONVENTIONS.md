@@ -124,6 +124,8 @@ chore(deps): bump black from 24.2 to 24.8
 
 ## Pull Request And Issue Policy
 
+- Before implementing a change intended for `main`, identify an existing open issue that defines the work. If no
+  matching issue exists, create one before editing repository files.
 - Every change merged into `main` must use a pull request.
 - Every pull request targeting `main` must link at least one existing open issue from this repository.
 - Put `Closes #123` in the pull request description when the merge completes the issue. GitHub will close the issue
@@ -133,9 +135,14 @@ chore(deps): bump black from 24.2 to 24.8
 - Use plain references such as `#123`; GitHub creates the link automatically. Do not construct a Markdown link around
   the issue number.
 - Verify that the referenced issue exists and represents the change. Never guess or fabricate an issue number.
-- Pull request titles follow the same English Conventional Commit subject format described in this document.
-- Individual branch commits do not require an issue reference. A commit footer may reference an issue when useful, but
-  the required traceability is maintained by the pull request.
+- Pull request titles use `<Conventional Commit subject> (#<primary-issue-number>)`, for example:
+  `feat(parser): add movie filename parser (#123)`.
+- The primary issue suffix must identify an existing open issue and match a supported relationship to that issue in
+  the pull request body.
+- When a pull request references multiple issues, select one primary issue for the title suffix and keep every
+  relationship in the pull request body.
+- Individual branch commits do not use the `(#<issue-number>)` suffix. A commit footer may reference an issue when
+  useful, but the required traceability is maintained by the pull request.
 - With squash merging, the final commit may contain the pull request number added by GitHub. Keep `Closes #123` in the
   pull request description rather than forcing the issue number into every commit subject.
 

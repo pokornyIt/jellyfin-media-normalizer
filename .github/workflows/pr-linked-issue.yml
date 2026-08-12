@@ -25,7 +25,20 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            const title = context.payload.pull_request.title ?? '';
             const body = context.payload.pull_request.body ?? '';
+
+            const titleMatch = title.match(/\(#(\d+)\)\s*$/);
+
+            if (!titleMatch) {
+              core.setFailed(
+                'Pull request title must end with a primary issue reference ' +
+                'in the form "(#<number>)".'
+              );
+              return;
+            }
+
+            const primaryIssueNumber = Number(titleMatch[1]);
 
             /*
              * Require a supported relationship followed by a local issue number:
@@ -54,6 +67,14 @@ jobs:
             const issueNumbers = [
               ...new Set(matches.map((match) => Number(match[1]))),
             ];
+
+            if (!issueNumbers.includes(primaryIssueNumber)) {
+              core.setFailed(
+                `Primary issue #${primaryIssueNumber} from the pull request title ` +
+                'must also be referenced in the body using a supported relationship.'
+              );
+              return;
+            }
 
             const validIssues = [];
 
@@ -94,16 +115,17 @@ jobs:
               validIssues.push(issueNumber);
             }
 
-            if (validIssues.length === 0) {
+            if (!validIssues.includes(primaryIssueNumber)) {
               core.setFailed(
-                'Pull request must reference at least one existing open issue ' +
-                'in this repository.'
+                `Primary issue #${primaryIssueNumber} from the pull request title ` +
+                'must be an existing open issue in this repository.'
               );
               return;
             }
 
+            core.info(`Valid primary issue: #${primaryIssueNumber}`);
             core.info(
-              `Valid linked issue(s): ${validIssues
+              `Valid open issue reference(s): ${validIssues
                 .map((number) => `#${number}`)
                 .join(', ')}`
             );

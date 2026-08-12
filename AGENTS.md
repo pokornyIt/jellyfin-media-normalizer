@@ -131,6 +131,8 @@ Follow the allowed types, format, and examples in:
 
 ## Pull Requests And Issue Traceability
 
+- Before implementing any change intended for `main`, identify an existing open issue that defines the work. If no
+  matching issue exists, create one before editing repository files.
 - Every change merged into `main` must go through a pull request.
 - Every pull request targeting `main` must link at least one existing open issue in this repository.
 - When merging the pull request will complete an issue, add `Closes #<issue-number>` to the pull request description.
@@ -138,9 +140,14 @@ Follow the allowed types, format, and examples in:
   and use `Related to #<issue-number>` in the description for reader context.
 - Use a plain GitHub issue reference such as `#123`; do not wrap it in a manually constructed Markdown link.
 - Verify that every referenced issue exists and matches the change. Never invent or guess an issue number.
-- Pull request titles must follow the same English Conventional Commit subject rules as commit messages.
-- Individual branch commits do not need an issue reference. Do not append an issue number to a generated commit subject
-  unless the user explicitly requests it and the correct issue is known.
+- Pull request titles must use the format `<Conventional Commit subject> (#<primary-issue-number>)`, for example:
+  `feat(parser): add movie filename parser (#123)`.
+- The primary issue suffix in the pull request title must identify an existing open issue and match a supported
+  relationship to that issue in the pull request body.
+- When a pull request references multiple issues, select one primary issue for the title suffix and keep every
+  relationship in the pull request body.
+- Individual branch commits do not need an issue reference. Do not append an issue-number suffix to a commit subject;
+  the `(#<issue-number>)` suffix is reserved for pull request titles.
 - For squash merges, allow GitHub to append the pull request number to the final commit subject. Keep the issue-closing
   reference in the pull request description.
 
