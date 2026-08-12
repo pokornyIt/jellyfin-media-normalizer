@@ -51,8 +51,26 @@ jobs:
       - name: Check TOML
         run: uv run pre-commit run check-toml --all-files
 
+      - name: Check YAML
+        run: uv run pre-commit run check-yaml --all-files
+
       - name: Lint YAML
         run: uv run pre-commit run yamllint --all-files
+
+      - name: Lint GitHub Actions workflows
+        run: uv run pre-commit run actionlint --all-files
+
+      - name: Lint shell scripts
+        run: uv run pre-commit run shellcheck --all-files
+
+      - name: Check repository hygiene
+        run: |
+          uv run pre-commit run check-case-conflict --all-files
+          uv run pre-commit run check-illegal-windows-names --all-files
+          uv run pre-commit run check-symlinks --all-files
+          uv run pre-commit run check-shebang-scripts-are-executable --all-files
+          uv run pre-commit run detect-private-key --all-files
+          uv run pre-commit run mixed-line-ending --all-files
 
       - name: Check merge conflicts
         run: uv run pre-commit run check-merge-conflict --all-files
