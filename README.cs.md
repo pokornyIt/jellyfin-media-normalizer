@@ -5,6 +5,10 @@
 Normalizuje názvy filmů a televizních seriálů pro Jellyfin. Prohledá knihovnu médií, klasifikuje soubory,
 ověří parsované výsledky a vyhledá ID poskytovatelů v TMDb a TVDB.
 
+> **Aktuální stav:** Toto vydání slouží pouze k analýze. Skenuje, parsuje, ověřuje, provádí základní párování
+> poskytovatelů a zapisuje kontrolní sestavy. Plánování přejmenování, dry-run provedení, skutečné změny souborového
+> systému, trvalá schválení a interaktivní kontrolní UI zatím nejsou implementované.
+
 Úplný návrh projektu, konvence názvů a fáze implementace najdete v
 [Popisu projektu](docs/cs/PROJECT-DESCRIPTION.md).
 

@@ -2,441 +2,340 @@
 
 [English](DEVELOPMENT_PLAN.md) | [Čeština](../cs/DEVELOPMENT_PLAN.md)
 
-This document tracks implementation status and next steps for jellyfin-media-normalizer.
-
-It should be updated continuously and used as the practical execution checklist for upcoming phases.
+This document tracks verified implementation status and the practical backlog for jellyfin-media-normalizer. Product
+rules come from [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md), while accepted direction and rationale come from
+[PRODUCT_DEVELOPMENT_BRIEF.md](PRODUCT_DEVELOPMENT_BRIEF.md).
 
 ## Current State Snapshot (2026-07-19)
 
-Verified as implemented and stable:
+Verified current capabilities:
 
-- Scan pipeline (filesystem inventory).
-- Parse and classification pipeline (movies, TV episodes, unknown).
-- Validation pipeline (structure, consistency, confidence scoring).
-- Basic provider lookup transport (embedded ID -> cache -> online resolver chain).
-- Reporting: JSON review report, unresolved JSON report, review HTML report, unresolved HTML report.
-- Runtime safety defaults, including dry-run default setting.
-- Local quality gates: ruff, pyright, pytest, pre-commit hooks.
+- supported video-file scanning;
+- flat per-file parsing and classification into movie, TV episode, or unknown;
+- per-file structural validation and confidence scoring;
+- basic embedded-ID, JSON-cache, and online-provider resolver chain;
+- JSON and HTML review and unresolved reports;
+- configured quality gates with Ruff, Pyright, pytest, and pre-commit.
 
-Verified quality status:
+Latest recorded verification:
 
-- `uv run pytest -q`: 466 passed.
-- `uv run ruff check src tests`: passed.
+- `uv run pytest -q`: 466 passed;
+- `uv run ruff check src tests`: passed;
 - `uv run pyright`: 0 errors.
 
-Main missing product capabilities:
+These dated results are evidence for that snapshot, not a claim that the target product workflow is complete.
 
-- Provider lookup still accepts the first online result with fixed confidence. Reviewable candidates, explainable
-  scoring, ambiguity thresholds, episode-title corroboration, and trusted cache provenance are not implemented.
-- Rename planning and rename execution are not implemented as first-class layers yet.
+<!-- markdownlint-disable MD013 -->
+| Capability                            | Status                                                |
+| ------------------------------------- | ----------------------------------------------------- |
+| Inventory and scan                    | Partial: supported video files only                   |
+| Classification and entity grouping    | Partial: flat file classification only                |
+| Name normalization                    | Partial: basic filename parsing only                  |
+| Validation                            | Partial: per-file checks; grouped consistency missing |
+| Provider lookup and selection         | Partial: resolver chain accepts the first result      |
+| Rename planning                       | Not started                                           |
+| Batch rename and rollback execution   | Not started                                           |
+| Static review exports                 | Partial: JSON and HTML implemented; CSV missing       |
+| Interactive review and approval UI    | Not started                                           |
+<!-- markdownlint-enable MD013 -->
 
-Scale and usability risk to address next:
-
-- Pure CLI + manual file edits will not scale well for large batches (hundreds to thousands of affected files).
+The current release is analysis-only. A dry-run configuration default exists, but no rename planner or executor
+exists yet, so it must not be presented as implemented rename safety.
 
 ## Non-Negotiable Constraints
 
-All development tasks must preserve these rules:
-
 - Never read, parse, create, modify, delete, or target `.nfo` files with standalone operations. An `.nfo` file may
   move only as an ignored child of a renamed parent directory.
-- Exactly one provider ID per movie or TV series entity.
-- Never rename without a validated plan.
-- Never bulk rename without a generated manifest.
-- Dry-run must remain the default execution mode.
+- Store at most one selected provider ID per movie or TV series and never store episode-level IDs.
+- Treat every symbolic link as unsupported and incompatible. Never follow, model, plan, or rename it, and do not
+  allow review to override the rejection.
+- Every rename must originate from an approved, validated, persisted manifest.
+- Dry-run remains the default; real execution requires explicit opt-in.
 
-## Phase Status
+## Release Architecture
 
-| Phase | Area                                  | Status                           |
-| ----- | ------------------------------------- | -------------------------------- |
-| 1     | Inventory and scan                    | Done                             |
-| 2     | Classification                        | Done                             |
-| 3     | Name normalization                    | Done                             |
-| 4     | Validation                            | Done                             |
-| 5     | Provider ID lookup                    | Partial                          |
-| 6     | Rename planning (manifest generation) | Not started                      |
-| 7     | Batch rename execution                | Not started                      |
-| 8     | Review workflow exports               | Partial (HTML done, CSV missing) |
+- CLI remains the source of truth for automation and real execution.
+- A lightweight FastAPI application with server-rendered HTML provides high-volume review and approval.
+- UI and CLI reuse the same application services, state transitions, planner, and executor boundaries.
+- The first UI is unauthenticated, defaults to `0.0.0.0`, and is supported only on a trusted machine or private LAN.
+  It may trigger planning and dry-run but has no real-execution endpoint.
+- SQLite stores mutable workflow state. Immutable rename and rollback manifests remain JSON artifacts.
+- Parsers and entity services remain media-server neutral. `NamingProfile` validates media-server compatibility;
+  `OutputScheme` renders target names. P0 ships explicit Jellyfin implementations with one fixed output scheme and no
+  dynamic third-party plugin discovery or configurable templates.
+- Docker Compose is the primary operator path. The long-running app uses `/media:ro`; a separate one-shot executor
+  in the `execution` profile uses `/media:rw`, no network, no web port, and a global workspace execution lock.
+- Official images target only `linux/amd64`, covering WSL, Synology DS925+, and Synology DS723+.
 
-## UX/Product Direction for Large Libraries
+## P0 - Operator-Ready Release
 
-Decision to implement:
-
-- Keep CLI as the source of truth for automation and batch operations.
-- Add a lightweight web application layer (FastAPI + server-rendered HTML) for high-volume review and approvals.
-
-Rationale:
-
-- The current approach is operationally strong but inefficient for triaging thousands of ambiguous entries.
-- A web UI can provide filtering, bulk approve/reject actions, and safer human-in-the-loop workflow.
-
-Architecture constraints for UI:
-
-- UI must not bypass planner/executor safety gates.
-- UI actions must write to persisted review or manifest state and reuse the same application services as the CLI.
-- The first UI may trigger dry-run but has no endpoint for real rename execution; real execution remains CLI-only.
-- UI must preserve one-provider-ID-per-movie-or-series rule and no `.nfo` rule.
-- The first UI is unauthenticated, binds to a configurable address with a `0.0.0.0` default, and is supported only on
-  a trusted machine or private LAN. Public Internet exposure is unsupported.
-
-Container release contract:
-
-- Build, smoke-test, and publish only `linux/amd64` images for the WSL environment and target Synology DS925+ and
-  DS723+ devices.
-- Do not publish ARM, 32-bit, or multi-platform image manifests in the first release.
-- Keep `platform` out of Compose so unsupported hosts fail instead of silently using emulation.
-- Keep the Dockerfile reasonably portable and add advanced native and cross-build examples, clearly marked as
-  best-effort and unsupported.
-- Keep the long-running `app` media mount explicitly read-only. Provide a separate one-shot `executor` under the
-  `execution` profile with an explicit writable mount, no network, no web port, and no restart.
-- Forbid variable media-mount modes. Require an explicit execution CLI flag and a global workspace execution lock in
-  addition to profile activation.
-
-## Execution Backlog
-
-## P0 - Critical Path (Release Blocking)
-
-### 1. Implement reviewable provider candidate selection
+### P0.1 Correct The Analysis Model And Persist Workflow State
 
 Goal:
 
-- Replace first-result matching with the accepted deterministic provider-selection policy.
+- Establish trustworthy entities and durable human-in-the-loop state before provider selection or planning.
 
 Deliverables:
 
-- Multiple-candidate provider responses with selection provenance and scoring explanations.
-- Versioned policy constants for normal score, title similarity, candidate lead, and sole-candidate thresholds.
-- Exact movie-year and reliable TV input-year gates.
-- Deterministic first, middle, and last episode-title corroboration for eligible yearless TV series.
-- Policy-aware cache reuse that distinguishes approved selections from unproven cached candidates.
-- Persisted `ready_for_approval` state without implicit rename approval.
+- Inventory directories, supported videos, supported subtitles, ignored membership, depth-limit violations, and
+  symbolic links without opening ignored files.
+- Add typed movie, TV series, episode, and associated-file entities plus directory-role classification.
+- Keep parsed and grouped entity fields independent of Jellyfin target-name formatting.
+- Group files into entities and integrate grouped consistency validation into the production workflow.
+- Enforce the accepted mixed-root, strict TV layout, multipart, version, subtitle, and incompatible-directory rules.
+- Add SQLite persistence for runs, entities, candidates, corrections, approvals, notes, workflow transitions, and
+  audit metadata with versioned migrations.
+- Record a focused persistence ADR with the implementation schema and migration boundary.
 
 Acceptance criteria:
 
-- API result order never determines provider selection by itself.
-- Tests cover threshold boundaries, year disagreement, close candidates, sole candidates, provider fallback, episode
-  corroboration, and missing episode coordinates.
-- Episode lookups never create episode-level provider IDs.
-- Manual overrides remain explicit and auditable; legacy or unproven cache entries require rescoring or review.
+- Every discovered path is managed, ignored with opaque membership, or reported incompatible.
+- Failed, ambiguous, incompatible, and low-confidence entities cannot become implicitly approved.
+- State survives restart and operators never need to edit generated JSON, YAML, or SQLite data directly.
+- Tests cover grouping, mixed content, maximum depth, direct-root warnings, subtitles, and symbolic-link rejection.
 
-### 2. Add rename models (foundation)
+### P0.2 Implement Baseline Reviewable Provider Selection
 
 Goal:
 
-- Introduce shared data contracts for planning and execution.
+- Replace first-result matching with the accepted deterministic first-release policy.
 
 Deliverables:
 
-- `RenameEntry` model.
-- `RenameManifest` model.
-- Stable schema fields: source path, target path, source fingerprint, reason, confidence, provider linkage, and batch
-  metadata.
-- Canonical manifest serialization with a SHA-256 digest.
+- Multiple provider candidates with provenance and scoring explanations.
+- Versioned constants for score, title similarity, candidate lead, sole-candidate, and year gates.
+- Exact movie-year and reliable TV input-year handling, embedded and manual selection precedence, and TMDb/TVDB
+  fallback behavior.
+- Policy-aware cache reuse and persisted `ready_for_approval` state without implicit approval.
+- Yearless series that fail title-only thresholds remain in review; episode corroboration is not part of P0.
 
 Acceptance criteria:
 
-- Models are fully typed and validated.
-- Models are reused by planners, executors, and reporting/summary outputs.
-- Symbolic links cannot be represented as executable rename sources.
+- API ordering, popularity, artwork, and metadata completeness never decide identity.
+- Boundary, year-conflict, close-candidate, sole-candidate, provider-fallback, and cache-provenance tests pass.
+- Manual overrides are explicit and auditable, and no episode-level provider ID is created.
 
-### 3. Implement planners layer
+### P0.3 Implement The Minimum Human Review UI
 
 Goal:
 
-- Create planners package for validated rename manifest generation.
+- Make persistent review practical before rename planning is introduced.
 
 Deliverables:
 
-- planners module with manifest builder service.
-- Manifest schema serialization to `data/workspace/manifests`.
-- Validation gate before a manifest can be marked executable.
-- File fingerprints from relative path, entry type, size, and modification time.
-- Directory tree digests that include opaque membership for ignored children without opening or modeling them.
+- FastAPI pages for review-required, ready-for-approval, and unresolved queues.
+- Search, filtering, sorting, and pagination for large libraries.
+- Corrections, provider selection, approve, reject, defer, notes, and guarded bulk actions.
+- Visible trusted-network warning and no endpoint for real filesystem execution.
+- A focused UI/service-boundary ADR created with the implemented interfaces.
 
 Acceptance criteria:
 
-- Planner accepts parsed and validated media items as input.
-- Planner output is deterministic and fully serializable.
-- Planner rejects invalid, ambiguous, or unresolved entries.
-- Planner rejects every symbolic link and any planned directory containing one.
+- Every state change uses shared services, is validated, persists across restart, and is auditable.
+- Bulk actions reject mixed or ineligible selections instead of bypassing item-level rules.
+- Route tests prove that the first UI exposes no real-execution operation.
 
-### 4. Implement executors layer
+### P0.4 Add The Shared Rename Manifest And Planner
 
 Goal:
 
-- Create executors package for safe batch rename execution from manifest only.
+- Generate deterministic, reviewable plans only from approved entities.
 
 Deliverables:
 
-- Dry-run executor (default behavior).
-- Explicit opt-in mode for real filesystem changes.
-- Durable per-operation audit with confirmed successful, failed, pending, and uncertain states.
-- Immutable JSON rollback-manifest generation from confirmed successful operations in reverse execution order.
-- Collision and destination-exists checks.
-- Source-fingerprint checks during dry-run, before each batch, and before each operation.
-- Stable changed-source failure codes and linkage of successful dry-run to the exact manifest digest.
-- Rollback entries linked to their original operations with reverse paths, fingerprints, expected absent targets,
-  sequence, and recovery reasons.
-- A global workspace execution lock shared by rename and rollback execution.
+- Versioned `RenameManifest` and `RenameEntry` models supporting `rename` and `rollback` manifest kinds.
+- Pluggable `NamingProfile` and `OutputScheme` contracts with explicit registries, `JellyfinNamingProfile`, and one
+  fixed `JellyfinDefaultOutputScheme`. Parsers must not render output paths; configurable templates remain P3.
+- Canonical JSON serialization and SHA-256 digest.
+- Source file fingerprints and directory tree digests with opaque ignored membership.
+- Deterministic targets for folders, videos, supported subtitles, multipart components, and versions.
+- Immutable manifest persistence and a human-readable UI preview grouped by logical batch. The preview shows current
+  and proposed paths, associated files, provider identity, warnings, validation failures, and the exact digest being
+  approved; raw JSON is a downloadable artifact rather than the primary review view.
 
 Acceptance criteria:
 
-- No rename path bypasses manifest input.
-- Dry-run performs no filesystem mutations.
-- Errors are logged with enough context for replay or manual rollback.
-- Any source mismatch stops the complete execution run and requires a newly approved workflow from scan through
-  dry-run; the executor never refreshes fingerprints in place.
-- Destination safety is rechecked independently at planning, dry-run, and immediately before execution.
-- The first operation failure stops the complete run without automatic rollback.
-- Rollback uses the normal executor, mandatory dry-run, explicit confirmation, no-overwrite checks, and a separate
-  audit; execution never mutates the rollback manifest.
-- Concurrent real rename or rollback execution fails before the first filesystem mutation.
+- Planner rejects unresolved, unapproved, invalid, incompatible, conflicting, or symbolic-link-containing input.
+- Repeated planning over unchanged approved state produces equivalent entries and digest.
+- Every target complies with the accepted Jellyfin naming and structure rules.
+- The manifest stores identifiers and versions for both the naming profile and output scheme, and rendered output
+  passes shared path, collision, provider-ID, `.nfo`, and safety validation.
 
-### 5. Add CLI commands for rename workflow
+### P0.5 Implement Safe Execution And Rollback
 
 Goal:
 
-- Make parse -> plan -> execute flow explicit in CLI.
+- Execute only verified manifests with explicit control and recoverable partial-failure evidence.
 
 Deliverables:
 
-- `plan-rename` command.
-- `execute-rename` command.
-- Optional `validate-manifest` command.
-- CLI flow to inspect, dry-run, and explicitly execute generated rollback manifests through the same executor.
+- Default dry-run and explicit real-execution mode.
+- Manifest integrity, source fingerprint, collision, target-absence, and global-lock checks at documented boundaries.
+- Durable per-operation states for successful, failed, pending, and uncertain work with stop on first failure.
+- Immutable rollback manifest generated only from confirmed successful operations, using the shared schema, reverse
+  list order, original-operation linkage, current source fingerprints, and its own digest.
+- Separate rollback dry-run, confirmation, and audit; no automatic rollback and no shell-command manifest.
+- A focused execution-safety ADR created with the concrete locking and audit design.
 
 Acceptance criteria:
 
-- `execute-rename` fails fast when manifest is missing or invalid.
-- Real execution requires explicit flag and cannot happen by default.
-- Commands produce clear user-facing summaries and output paths.
-- Failure output identifies the rollback manifest and distinguishes completed, failed, pending, and uncertain work.
+- No mutation path bypasses a validated manifest or writes during dry-run.
+- Changed sources, existing targets, collisions, invalid digests, and concurrent execution fail before unsafe change.
+- Execution never mutates its input manifest or overwrites an existing path.
+- Failure tests prove audit classification and safe rollback-manifest generation.
 
-### 6. Define CLI + UI architecture contract (ADR)
+### P0.6 Integrate CLI And UI Workflow Operations
 
 Goal:
 
-- Lock down integration boundaries before implementing the web layer.
+- Expose the shared planner and executor services through clear operator workflows.
 
 Deliverables:
 
-- Architecture decision record describing CLI responsibilities vs UI responsibilities.
-- Clear service-level interfaces reusable by both CLI and web app.
-- Initial deployment contract covering configurable binding, the trusted private-network assumption, warning outside
-  loopback, and the absence of a real-execution UI endpoint.
-- Boundary for a later authentication and remote-access hardening add-on.
+- CLI commands to plan, validate, dry-run, and explicitly execute rename and rollback manifests.
+- UI manifest preview and exact-digest approval, planner trigger, dry-run results, and audit history.
+- Clear summaries, artifact paths, failure codes, and links between original and rollback runs.
 
 Acceptance criteria:
 
-- No duplicated business logic between CLI and UI entrypoints.
-- Planner/executor remain single source of truth for mutations.
-- The initial trusted-network assumptions and unsupported public exposure are explicitly documented.
+- Real execution remains CLI-only and requires an explicit flag.
+- CLI and UI produce consistent state transitions and results through shared services.
+- End-to-end fixture tests cover analysis through approval, planning, dry-run, execution failure, and rollback dry-run.
+
+### P0.7 Package The Supported Compose Deployment
+
+Goal:
+
+- Provide the supported single-operator deployment without weakening filesystem safety.
+
+Deliverables:
+
+- Non-root production Dockerfile, `.dockerignore`, Compose file, healthcheck, and example environment.
+- Long-running app with read-only media and persistent workspace.
+- One-shot execution-profile service with explicit writable media, no network, no web port, and no restart.
+- Reproducible `linux/amd64` build, smoke test, image metadata, and release workflow.
+- Focused deployment ADR covering mounts, permissions, upgrade, backup, and recovery boundaries.
+
+Acceptance criteria:
+
+- Normal `docker compose up` cannot mutate the media library.
+- Unsupported platforms fail normally without hidden emulation.
+- Workspace database and artifacts survive upgrades, with tested migration and backup guidance.
+
+### P0.8 Complete Operator Documentation And End-To-End Verification
+
+Goal:
+
+- Make the supported workflow usable without undocumented knowledge.
+
+Deliverables:
+
+- Compose-first quick start, setup, review, execution, rollback, backup, upgrade, and troubleshooting guidance.
+- Separate read-only application and explicit writable executor examples.
+- Representative large-library fixture and performance validation.
+- Updated English and Czech README and documentation pairs reflecting actual behavior.
+
+Acceptance criteria:
+
+- A new operator can complete the safe workflow without editing generated state files or guessing commands.
+- Documentation never presents planned behavior, unsupported architectures, or public exposure as supported.
+- Repository quality gates and end-to-end workflow tests pass.
 
 ## P1 - Important Follow-Up
 
-### 5. Complete report exports
+### P1.1 Add Episode-Title Corroboration
 
-Goal:
+- Measure the yearless-series review queue first.
+- If justified, implement the accepted deterministic two-or-three-episode sampling and 75/25 scoring policy.
+- Cache episode evidence reproducibly and never create episode-level provider IDs.
 
-- Extend reporting outputs for operations and review.
+### P1.2 Complete CSV And Execution Exports
 
-Deliverables:
+- Add CSV review and unresolved exports from the same persisted dataset.
+- Add a JSON execution summary; add CSV only if it provides concrete operator value.
 
-- CSV reporter for review and unresolved datasets.
-- Optional manifest execution summary report format (JSON first, CSV optional).
+### P1.3 Improve Long-Run Observability
 
-Acceptance criteria:
+- Add run correlation IDs, structured start and finish events, elapsed time, progress, and optional persistent logs.
+- Keep secrets and credential-bearing URLs out of diagnostics.
 
-- Export commands produce valid files for the same source dataset.
-- Output clearly marks unresolved and manual-review entries.
+### P1.4 Improve CLI Ergonomics
 
-### 6. Improve operational logging for long runs
+- Add consistent examples, documented exit codes, report switches, and actionable summaries.
+- Keep safety-critical flags explicit and avoid convenience defaults that enable mutation.
 
-Goal:
+## P2 - Maintenance And Optional Hardening
 
-- Strengthen observability for large-library execution.
+### P2.1 Align Test Structure Naming
 
-Deliverables:
+- Align the existing `tests/parses` mismatch with `src/parsers` without collection regressions.
 
-- Structured per-command start/finish log events with elapsed time.
-- Per-run correlation ID added to log context.
-- Optional file log sink in `data/workspace/logs` (alongside stdout).
+### P2.2 Tighten Type Checking Incrementally
 
-Acceptance criteria:
+- Strengthen new critical modules first and add targeted annotations where they remain useful and low-noise.
 
-- Long runs are traceable end-to-end from one run identifier.
-- Operators can inspect logs after command completion without terminal history.
+### P2.3 Add Authenticated Remote Access
 
-### 7. CLI user-friendliness improvements
+- Treat authentication, sessions, CSRF, trusted-proxy handling, and HTTPS reverse-proxy guidance as an add-on.
+- Keep Synology account integration optional and do not make it a dependency of trusted private-network operation.
 
-Goal:
+## P3 - Future Wishlist (Not Release Blocking)
 
-- Improve command ergonomics and feedback quality.
+### P3.1 Add More Media-Server Naming Profiles
 
-Deliverables:
+- Research and specify a Plex naming profile, including provider tags and episode naming, before implementation.
+- Treat Emby as a Jellyfin-profile alias only if compatibility tests prove identical required output; otherwise add a
+  separate implementation.
+- Consider other profiles only when they fit the core model and preserve all safety rules.
+- Exclude Kodi workflows that require application-managed `.nfo` files.
 
-- Consistent help text with practical examples for key commands.
-- Exit-code policy documentation (success, validation warning mode, fatal failure).
-- Optional `--no-html`/`--no-json` report switches for parse workflow.
+### P3.2 Generalize Language And Localization Logic
 
-Acceptance criteria:
+- Separate metadata locale, display-title fallback, audio markers, and subtitle markers.
+- Keep Czech and `CZ` as first-release defaults while designing validated language tags and filename mappings.
+- Feed these choices into `OutputScheme` rather than branching parsers or server profiles by language.
 
-- Typical operator flow is understandable from `--help` output only.
-- Report generation behavior is explicit and configurable.
+### P3.3 Add Constrained Naming Templates
 
-### 8. Implement review and approval web UI (FastAPI + HTML)
-
-Goal:
-
-- Enable scalable manual triage and approval for high-volume rename decisions.
-
-Deliverables:
-
-- FastAPI app with pages for review-needed and unresolved items.
-- Search, filtering, sorting, and pagination for large datasets.
-- Bulk actions: approve, reject, defer, add note/reason.
-- Manifest preview view (before/after paths, provider ID, confidence, risk flags).
-- Trigger endpoints for planner run and executor dry-run.
-
-Acceptance criteria:
-
-- Operator can process large review sets significantly faster than file-by-file edits.
-- Every action is persisted and auditable with its time, change, and single local-operator actor.
-- UI exposes planner and dry-run actions but no endpoint for real rename execution.
-- The configurable bind address defaults to `0.0.0.0` and non-loopback startup produces a visible warning.
-
-## P2 - Maintenance and Consistency
-
-### 9. Align test structure naming
-
-Goal:
-
-- Remove directory naming mismatch in tests.
-
-Deliverables:
-
-- Align `tests/parses` with `src/parsers` naming.
-- Keep imports and test discovery stable.
-
-Acceptance criteria:
-
-- Test paths and source paths map cleanly.
-- No test collection regressions.
-
-### 10. Tighten type-checking policy incrementally
-
-Goal:
-
-- Improve pyright strictness where safe.
-
-Deliverables:
-
-- Revisit unknown-type reporting settings for new modules first (planners/executors).
-- Add targeted annotations in weaker areas identified during implementation.
-
-Acceptance criteria:
-
-- New critical modules ship with stronger type coverage.
-- Type errors remain actionable and low-noise.
-
-### 11. Documentation completeness for operators
-
-Goal:
-
-- Ensure docs match real workflow and reduce onboarding friction.
-
-Deliverables:
-
-- Add rename workflow docs after phases 6 and 7 are implemented.
-- Add troubleshooting section for provider keys, cache behavior, and unresolved matches.
-- Add sample end-to-end command sequence (scan -> parse -> plan -> execute dry-run).
-- Add web UI operator guide: run locally, review workflow, and safety model.
-- Document the supported AMD64 image in the operator quick start and place unsupported native and `buildx` source
-  build examples in advanced documentation.
-- Document normal read-only Compose startup separately from the explicit one-shot execution-profile command.
-
-Acceptance criteria:
-
-- New operator can run full safe workflow from docs without guessing.
-- Documentation is consistent with current CLI and report outputs.
-- Documentation never presents an untested architecture as supported.
-- The normal quick start cannot be mistaken for a writable-media deployment.
-
-### 12. Add authenticated remote-access deployment
-
-Goal:
-
-- Harden access after the functional single-operator UI is complete.
-
-Possible scope:
-
-- Single-operator authentication, sessions, and CSRF protection.
-- HTTPS reverse-proxy guidance and trusted-proxy handling.
-- Optional broader account or role support if a concrete need appears.
-- Optional Synology account integration as a non-required enhancement.
-
-Acceptance criteria:
-
-- The add-on does not become a dependency of the trusted private-network UI.
-- Any newly supported remote-access mode has explicit security and deployment documentation.
+- Extend `OutputScheme` with named presets and typed tokens, for example
+  `{{year}} - {{movie_title}} - {{provider_tag}} - {{language}}`, with preview and validation.
+- Reject arbitrary code, invalid paths, collisions, ambiguous output, and templates that bypass profile or safety rules.
 
 ## Recommended Implementation Order
 
-1. Rename models and schema.
-2. Planner service and manifest generation.
-3. Executor service with default dry-run.
-4. CLI integration for plan and execute commands.
-5. CLI + UI architecture ADR.
-6. Planner and executor test suite.
-7. CSV reporting extensions.
-8. Logging and CLI UX improvements.
-9. FastAPI + HTML review UI.
-10. Final documentation pass for rename workflow and UI operations.
-11. Optional authenticated remote-access hardening.
+1. Correct entity grouping and add SQLite workflow persistence.
+2. Implement baseline reviewable provider selection.
+3. Implement the minimum persistent review UI.
+4. Add the shared manifest schema, planner, and UI preview.
+5. Add safe dry-run, execution, audit, and rollback.
+6. Integrate CLI and UI operations through shared services.
+7. Package and verify the supported Compose deployment.
+8. Complete operator documentation and end-to-end verification.
+9. Measure production friction before selecting P1, P2, or wishlist work.
 
-## Test Strategy for Remaining Phases
+## Cross-Cutting Test Strategy
 
-Required tests for planner and executor features:
+- Domain grouping, directory roles, depth limits, subtitles, multipart media, versions, mixed content, and symlinks.
+- SQLite migrations, restart persistence, valid state transitions, audit history, and concurrent update handling.
+- Provider threshold boundaries, year conflicts, fallback, ambiguity, cache provenance, and explicit override behavior.
+- UI filtering, pagination, corrections, approvals, guarded bulk actions, and absence of real execution routes.
+- Manifest and tree-digest determinism, changed-source detection, collision checks, and symbolic-link rejection.
+- Dry-run with zero mutations, explicit real-execution opt-in, global locking, stop-on-failure, and durable audit
+  states.
+- Shared-schema rollback ordering, integrity, changed-source rejection, target-exists rejection, and separate audit.
+- End-to-end CLI and UI flows over representative fixtures without live APIs or destructive external filesystems.
 
-- Valid manifest generation from clean parsed inputs.
-- Manifest rejection for unresolved or conflicting entries.
-- Manifest and directory-digest determinism across repeated scans of unchanged fixtures.
-- Rejection of symbolic links without following their targets.
-- Detection of changed paths, entry types, sizes, modification times, and directory membership.
-- Rejection of a dry-run result created for a different manifest digest.
-- Rejection of concurrent execution while the global workspace execution lock is held.
-- `execute-rename` dry-run confirms zero filesystem mutations.
-- `execute-rename` hard-fails without explicit execution flag.
-- Stop-on-failure behavior, durable audit states, rollback-manifest ordering, and rollback-manifest integrity.
-- Rollback refusal when its source fingerprint changes or its target exists.
-- End-to-end CLI flow on fixture library data.
-- UI integration tests for approval actions and manifest state transitions.
-- UI-to-executor dry-run flow tests (no filesystem mutations).
-- UI route tests proving that no real rename endpoint exists in the initial release.
+## Operator-Ready Definition Of Done
 
-## Definition of Done for Rename Workflow
-
-Rename workflow is considered complete only when all items below are true:
-
-- Manifest generation exists and is mandatory before execution.
-- Rename execution supports dry-run by default.
-- Real execution requires explicit opt-in.
-- The first failure stops the run and produces a durable audit plus an immutable rollback manifest for confirmed
-  successful operations.
-- Rollback requires its own successful dry-run and explicit opt-in through the normal executor.
-- CLI commands for plan and execute are documented and tested.
-- End-to-end tests verify safe behavior under failure conditions.
+- The supported Compose application starts without host Python setup and mounts media read-only by default.
+- Entities, provider candidates, corrections, approvals, notes, and audit state persist across restart.
+- The minimum UI makes review practical and exposes no real-execution endpoint.
+- An approved, validated, immutable manifest and successful dry-run are mandatory before execution.
+- Real execution is explicit, CLI-only, locked, audited, stops on failure, and has a documented rollback path.
+- English and Czech operator documentation covers setup through recovery and matches tested behavior.
 
 ## Operational Update Routine
 
-When a task starts:
-
-- Move it to In Progress in this file or related issue tracking.
-- Link implementation PRs and related tests.
-
-When a task completes:
-
-- Mark as Done and add short verification notes.
-- Record follow-up debt as a new backlog item with priority.
-
-Keep this file as the single practical roadmap for development execution.
+When work starts, mark the related backlog item in progress in the issue tracker and link its implementation PR and
+tests. When it completes, record verification and create separate follow-up issues for remaining debt. Keep dated
+verification evidence separate from product-completeness claims.

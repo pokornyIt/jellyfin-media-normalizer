@@ -70,7 +70,26 @@ strukturální roli nelze určit, je nekompatibilní a nesmí vstoupit do výbě
 přejmenování. Soubory `.nfo` se vždy ignorují a nikdy nevstupují do doménového modelu ani samostatné operace se
 souborovým systémem. Smí se přesunout pouze jako obsah přejmenované nadřazené složky.
 
-## Konvence názvů
+## Hranice profilu názvů a výstupního schématu
+
+Parsery a analýza entit vytvářejí pole názvu, roku, jazyka, poskytovatele, epizody, verze a komponenty nezávislá na
+mediálním serveru. Nikdy neskládají cílové názvy souborů nebo složek. Planner používá dva pluggable kontrakty:
+
+- `NamingProfile` určuje a validuje pravidla kompatibility mediálního serveru, včetně tagů poskytovatele, struktury
+  složek, zápisu epizod, povinných polí a kompatibilních výstupních schémat;
+- `OutputScheme` vykresluje ověřená sémantická pole do částí cest a řídí jazyk názvu, jazykové značky, volitelná pole
+  prezentace a pořadí tokenů.
+
+První vydání implementuje `JellyfinNamingProfile` a jedno pevné `JellyfinDefaultOutputScheme`, vybrané explicitními
+registry nebo dependency injection. Neimplementuje konfigurovatelné šablony ani dynamický systém pluginů třetích
+stran. Každý manifest zaznamená identifikátory a verze obou komponent. Budoucí profily a výstupní schémata Plex nebo
+Emby mohou měnit kompatibilitu nebo prezentaci beze změn parsování, výběru poskytovatele, bezpečnosti manifestu nebo
+provedení. Alias Emby může znovu použít Jellyfin pouze po testech prokazujících shodné požadavky.
+
+Všechny profily názvů a výstupní schémata nadále podléhají společným pravidlům cest, kolizí, ID poskytovatele, `.nfo`,
+schválení, otisků, dry-run a provedení.
+
+## Konvence názvů pro Jellyfin
 
 ### Filmy
 
@@ -184,10 +203,11 @@ Automatický výběr vyžaduje skóre `0.92`, podobnost názvu `0.90` a náskok 
 poskytovatele. Jediný kandidát vyžaduje skóre i podobnost názvu `0.97`. Pořadí API, popularita, grafika, dostupnost
 přehledu a úplnost metadat nepřispívají ke skóre identity.
 
-Seriál bez roku může použít názvy epizod od poskytovatele jako další důkaz, pokud nestačí skórování samotného názvu.
-Deterministicky se vyberou až tři vhodné epizody jako první, prostřední a poslední použitelná epizoda, pokud možno
-z různých řad. Jsou potřeba alespoň dva vzorky s použitelnými názvy epizod. Speciály, `Season 00`, vícedílné soubory,
-soubory s více epizodami a nerozpoznatelné epizody se vynechají.
+Seriál bez roku, který neprojde skórováním samotného názvu, přejde v prvním vydání ke kontrole. Pozdější optimalizace
+párování může použít názvy epizod od poskytovatele jako další důkaz. Deterministicky se pak vyberou až tři vhodné
+epizody jako první, prostřední a poslední použitelná epizoda, pokud možno z různých řad. Jsou potřeba alespoň dva
+vzorky s použitelnými názvy epizod. Speciály, `Season 00`, vícedílné soubory, soubory s více epizodami a
+nerozpoznatelné epizody se vynechají.
 
 Každá vybraná kombinace řady a epizody musí u kandidáta existovat a každý název musí mít podobnost alespoň `0.85`
 s lokalizovaným nebo původním názvem epizody od poskytovatele. Potvrzené skóre používá 75 % podobnosti názvu seriálu
@@ -210,7 +230,8 @@ verze zásad a vstupy identity se nezměnily; ostatní výsledky vyžadují nov�
 - Vedlejší účinky jsou izolovány ve vrstvě executorů.
 - Nejednoznačné položky a položky s nízkou mírou jistoty vždy směřují ke kontrole a nikdy se nezpracují automaticky.
 - Prioritou je čitelná struktura souborového systému.
-- Symbolické odkazy se vždy odmítnou a nikdy se nenásledují, nemodelují, neplánují ani nepřejmenovávají.
+- Symbolické odkazy jsou v celém workflow nepodporované a nekompatibilní. Nikdy se nenásledují, nemodelují, neplánují
+  ani nepřejmenovávají a lidská kontrola nemůže jejich odmítnutí obejít.
 
 ## Bezpečnost stavu zdroje
 
@@ -221,8 +242,8 @@ identity nepoužívá číslo inode, čas vytvoření, vlastníka ani oprávněn
 Přejmenovávaná složka používá stromový SHA-256 digest nad kanonicky seřazenou inventurou. Každý potomek přispívá
 relativní cestou a typem položky; spravované běžné soubory také velikostí a časem změny. Ignorovaní potomci včetně
 `.nfo` přispívají pouze neprůhledným členstvím a nikdy se neotevírají, neparsují, nemodelují ani nedostávají samostatný
-záznam manifestu. Symbolický odkaz je vždy neplatný, nikdy se nenásleduje a svou přítomností vyloučí obsahující složku
-z plánování a provedení.
+záznam manifestu. Symbolický odkaz je vždy nepodporovaný a nekompatibilní, nikdy se nenásleduje a svou přítomností
+vyloučí obsahující složku z plánování a provedení. Nelze jej přijmout lidskou kontrolou.
 
 Manifest má samostatný SHA-256 digest kanonické serializace. Dry-run platí pouze pro přesný digest manifestu a shodné
 otisky zdrojů. Stav zdrojů se znovu ověřuje při dry-run, bezprostředně před každou dávkou a před každou operací. Každý
@@ -235,9 +256,10 @@ První neúspěšné přejmenování zastaví celý běh provádění. Aplikace 
 místo toho rozliší potvrzené úspěšné, neúspěšné, čekající a nejisté operace. Pouze potvrzené úspěšné operace se v
 opačném pořadí provedení obrátí do neměnného JSON manifestu rollbacku.
 
-Každá položka rollbacku odkazuje na původní operaci a obsahuje současnou zdrojovou cestu, původní cílovou cestu,
-otisk zdroje, očekávanou nepřítomnost cíle, pořadí a důvod obnovy. Manifest zaznamenává své schéma a druh, původní běh
-a digest manifestu, čas vytvoření a vlastní SHA-256 digest. Ukládá strukturovaná data, nikoli shellové příkazy.
+Rollback znovu používá běžné schéma `RenameManifest` a `RenameEntry` s hodnotou `manifest_kind` nastavenou na
+`rollback`. Každá položka odkazuje na původní operaci a obsahuje obrácené cesty a současný otisk zdroje. Pořadí
+seznamu určuje pořadí provedení, zatímco nepřítomnost cíle zůstává invariantem executoru. Manifest odkazuje na původní
+běh a digest manifestu a má vlastní SHA-256 digest. Ukládá strukturovaná data, nikoli shellové příkazy.
 
 Rollback zpracovává běžný executor manifestu. Stav zdroje a nepřítomnost cíle se znovu ověří, dry-run je povinný,
 skutečný rollback vyžaduje explicitní potvrzení a každý výsledek se zapíše do samostatného auditu. Rollback nikdy
@@ -251,10 +273,12 @@ Adresa naslouchání je konfigurovatelná a má výchozí hodnotu `0.0.0.0`, aby
 spuštěnou ve WSL nebo kontejneru. Naslouchání mimo loopback zobrazí upozornění, ale nebrání spuštění. Dostupná
 důvěryhodná zařízení určují pravidla firewallu hostitele a publikování portu v Compose.
 
-Počáteční UI podporuje nastavení, analýzu, kontrolu, opravy, schvalování, náhled manifestu, historii auditu a dry-run.
-Nemá endpoint pro skutečné provedení přejmenování. Skutečné změny souborového systému zůstávají pouze v CLI a nadále
-vyžadují ověřený manifest, úspěšný dry-run a samostatné explicitní potvrzení. Změnové trasy UI nikdy nepoužívají
-metodu `GET`.
+Počáteční UI podporuje nastavení, analýzu, kontrolu, opravy, schvalování, historii auditu a dry-run. Manifest zobrazuje
+jako čitelný diff před/po seskupený do logických dávek, včetně souvisejících souborů, identity poskytovatele,
+upozornění, chyb validace a přesného schvalovaného digestu. Surový JSON zůstává ke stažení jako vstup executoru, ale
+není hlavním kontrolním pohledem. UI nemá endpoint pro skutečné provedení přejmenování. Skutečné změny souborového
+systému zůstávají pouze v CLI a nadále vyžadují ověřený manifest, úspěšný dry-run a samostatné explicitní potvrzení.
+Změnové trasy UI nikdy nepoužívají metodu `GET`.
 
 Vystavení veřejnému internetu a nedůvěryhodné síti není podporované. Autentizace, účty, role, session, ochrana CSRF,
 TLS spravované aplikací, návod k HTTPS reverse proxy a zabezpečení vzdáleného přístupu jsou pozdější nadstavby.
@@ -290,6 +314,15 @@ docker compose --profile execution run --rm executor <command> <explicit-executi
 Compose uvádí `:ro` a `:rw` přímo; žádná proměnná prostředí nepřepíná režim mountu médií. Před každou změnou executor
 získá globální execution lock ve workspace. Zapisovatelný mount ani lock neobcházejí požadavky na integritu manifestu,
 otisky zdrojů, bezpečnost cílů, úspěšný dry-run, explicitní potvrzení, zastavení při chybě, rollback ani audit.
+
+## Perzistence
+
+První vydání používá SQLite pro měnitelný stav workflow, včetně běhů, seskupených entit médií, kandidátů
+poskytovatele, oprav, schválení, poznámek, přechodů stavů a metadat auditu. Verzované neměnné manifesty přejmenování a
+rollbacku zůstávají artefakty JSON. Od operátora se neočekává přímá editace žádného z těchto formátů úložiště.
+
+Změny schématu používají verzované a obnovitelné migrace. Upgrade kontejneru zachová databázi a artefakty workspace
+a před potenciálně nekompatibilní migrací poskytne návod k záloze.
 
 ## Implementace
 
@@ -362,41 +395,48 @@ ID poskytovatelů se zjišťují v tomto pořadí:
 
 Položky klasifikované jako `unknown` se zcela přeskočí.
 
-### Fáze implementace
+### Přehled aktuální implementace
 
-| #   | Fáze                                  | Stav              |
-| --- | ------------------------------------- | ----------------- |
-| 1   | Inventarizace a skenování             | ✅ Implementováno |
-| 2   | Klasifikace                           | ✅ Implementováno |
-| 3   | Normalizace názvů                     | ✅ Implementováno |
-| 4   | Ověření                               | ✅ Implementováno |
-| 5   | Vyhledání ID poskytovatele            | 🚧 Částečně       |
-| 6   | Plánování přejmenování (manifest)     | ⏳ Plánováno      |
-| 7   | Dávkové provedení přejmenování        | ⏳ Plánováno      |
-| 8   | Kontrolní workflow (HTML/CSV sestavy) | ⏳ Plánováno      |
+<!-- markdownlint-disable MD013 -->
+| #   | Schopnost                              | Stav                                                   |
+| --- | -------------------------------------- | ------------------------------------------------------ |
+| 1   | Inventarizace a skenování              | Částečně: pouze podporované video soubory              |
+| 2   | Klasifikace a seskupování entit        | Částečně: pouze plochá klasifikace souborů             |
+| 3   | Normalizace názvů                      | Částečně: pouze základní parsování názvů souborů       |
+| 4   | Ověření                                | Částečně: chybí skupinová konzistence                  |
+| 5   | Vyhledání a výběr ID poskytovatele     | Částečně: základní řetězec a první výsledek            |
+| 6   | Plánování přejmenování                 | Nezahájeno                                             |
+| 7   | Dávkové provedení přejmenování         | Nezahájeno                                             |
+| 8   | Statické kontrolní exporty             | Částečně: JSON a HTML hotové; CSV chybí                |
+| 9   | Interaktivní kontrolní UI              | Nezahájeno                                             |
+<!-- markdownlint-enable MD013 -->
 
 #### Fáze 1 — Inventarizace a skenování
 
-Prohledá knihovnu médií a shromáždí cesty k souborům, strukturu složek a vzory názvů. Zjistí podporované přípony videa.
-Výsledkem je plochý seznam objektů `MediaItem`, který slouží jako vstup všech dalších fází.
+Současný scanner zjišťuje podporované přípony videa a vytváří plochý seznam objektů `MediaItem`. Pro bezpečné
+seskupování a plánování stále chybí úplná inventura složek, titulků, ignorovaných souborů, limitu hloubky a
+symbolických odkazů.
 
 #### Fáze 2 — Klasifikace
 
-Každá položka se klasifikuje jako `movie`, `tv_episode` nebo `unknown`.
+Současná implementace klasifikuje každý plochý video soubor jako `movie`, `tv_episode` nebo `unknown`.
 
 Klasifikace vychází ze vzorů názvů souborů: rok v závorkách značí film, značka `SxxExx` nebo její ekvivalent značí
-epizodu seriálu. Položky, které neodpovídají ani jednomu vzoru, se označí jako `unknown`.
+epizodu seriálu. Položky, které neodpovídají ani jednomu vzoru, se označí jako `unknown`. Klasifikace rolí složek a
+seskupování souborů do entit filmu, seriálu, epizody a souvisejícího souboru nejsou implementované.
 
 #### Fáze 3 — Normalizace názvů
 
-Normalizované názvy se parsují do strukturovaných objektů `ParsedName` s názvem, rokem, řadou či epizodou, jazykovým
-kódem a příznaky titulků. Před parsováním se odstraní značky vydání, například kodeky, rozlišení a kvalita.
+Základní normalizované názvy se parsují do objektů `ParsedName` s názvem, rokem, souřadnicemi řady či epizody,
+jazykovým kódem a příznaky titulků. Před parsováním se odstraní značky vydání. Přijatá pravidla pro vícedílná média,
+verze, související soubory, zobrazovaný název a striktní strukturu seriálů zatím nejsou implementovaná úplně.
 
 #### Fáze 4 — Ověření
 
-Všechny parsované položky se ověří z hlediska strukturální úplnosti a vnitřní konzistence. Každá položka dostane
-`ValidationStatus` (`passed`, `review_needed` nebo `failed`) a `ConfidenceLevel` (`high`, `medium` nebo `low`). Položky
-s vysokou jistotou postupují automaticky, ostatní se označí ke kontrole.
+Parsované položky dostanou ověření struktury jednotlivého souboru, `ValidationStatus` (`passed`, `review_needed` nebo
+`failed`) a `ConfidenceLevel` (`high`, `medium` nebo `low`). Validator konzistence existuje, ale skupinová konzistence
+není zapojená do produkčního workflow. Žádná položka se nepovažuje za schválenou jen proto, že projde ověřením
+jednotlivého souboru.
 
 #### Fáze 5 — Vyhledání ID poskytovatele
 
@@ -407,8 +447,9 @@ Výsledkem každé nalezené položky je objekt `ProviderMatch` obsahující `pr
 a `lookup_key`. Položky bez shody se zapíší do sestavy nevyřešených položek.
 
 Současný online resolver přijímá první vrácený výsledek s pevnou jistotou. Více kandidátů, vysvětlitelné skórování,
-prahy nejednoznačnosti, potvrzení názvy epizod, verzované opětovné použití mezipaměti a trvalý původ výběru je nutné
-teprve implementovat, aby tato fáze splnila produktové zásady.
+prahy nejednoznačnosti, verzované opětovné použití mezipaměti a trvalý původ výběru je nutné teprve implementovat,
+aby tato fáze splnila produktové zásady. Potvrzení názvy epizod je pozdější optimalizace, nikoli požadavek prvního
+vydání.
 
 #### Fáze 6 — Plánování přejmenování *(plánováno)*
 
@@ -423,10 +464,16 @@ Přejmenování se provede v logických dávkách, tedy filmy po složkách a se
 manifestu. Executor bude podporovat audit, detekci kolizí, okamžité zastavení při chybě a explicitní rollback přes
 neměnný obrácený manifest. Automatický rollback není podporovaný.
 
-#### Fáze 8 — Kontrolní workflow *(plánováno)*
+#### Fáze 8 — Statické kontrolní exporty *(částečně)*
 
-Položky označené ke kontrole se exportují také do formátů HTML a CSV, aby je bylo možné ručně prohlížet mimo JSON.
-Tato fáze nemá žádné vedlejší účinky na souborový systém.
+Kontrolní sestavy a sestavy nevyřešených položek ve formátech JSON a HTML existují. Export CSV zůstává plánovaný.
+Generování sestav nemá žádné vedlejší účinky na knihovnu médií.
+
+#### Fáze 9 — Interaktivní UI pro kontrolu a schválení *(plánováno)*
+
+Minimální webové UI poskytne trvalé, filtrovatelné a stránkované kontrolní fronty, opravy, výběr poskytovatele,
+schválení, zamítnutí, odložení, poznámky a bezpečné hromadné akce. Může zpřístupnit plánování a výsledky dry-run, ale
+v prvním vydání nemá endpoint pro skutečné změny souborového systému.
 
 ## Očekávaný výsledek
 

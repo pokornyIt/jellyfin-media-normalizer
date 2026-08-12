@@ -84,8 +84,9 @@ schvalování. Hlavní instalační cesta nesmí vyžadovat instalaci Pythonu na
 - Před provedením se musí kontrolovat kolize cílů, chybějící a změněné zdroje i přesuny mezi souborovými systémy.
 - Každý pokus o operaci se musí zapsat do auditního protokolu použitelného pro ruční obnovu.
 - Výsledky s nízkou jistotou, konfliktní nebo nejednoznačné výsledky musí projít kontrolou člověkem.
-- Symbolické odkazy se vždy odmítnou. Aplikace je nikdy nenásleduje, nemodeluje, neplánuje ani nepřejmenovává.
-  Symbolický odkaz uvnitř složky, která by se jinak přejmenovala, tuto složku z plánování vyloučí.
+- Symbolické odkazy jsou nepodporovaným typem položky souborového systému v celém workflow. Aplikace je hlásí jako
+  nekompatibilní a nikdy je nenásleduje, nemodeluje, neplánuje ani nepřejmenovává. Kontrola člověkem nemůže toto
+  pravidlo obejít. Symbolický odkaz uvnitř složky, která by se jinak přejmenovala, tuto složku z plánování vyloučí.
 
 ## Požadovaný doménový model
 
@@ -163,6 +164,25 @@ Vybraná shoda poskytovatele musí zaznamenat:
 - kdo nebo co ji vybralo a kdy;
 - entitu, ke které výběr patří.
 
+### Profil názvů a výstupní schéma
+
+Parsování a analýza entit vytvářejí pole nezávislá na mediálním serveru a nikdy nevykreslují cílové názvy souborů
+nebo složek. Dva spolupracující pluggable kontrakty oddělují kompatibilitu od prezentace:
+
+- `NamingProfile` určuje pravidla mediálního serveru, například podporované tagy poskytovatele, požadovanou strukturu
+  složek, zápis epizod, povinná pole a výstupní schémata kompatibilní s daným serverem;
+- `OutputScheme` vykresluje ověřená sémantická pole do částí cest, včetně jazyka názvu, jazykových značek a pořadí
+  tokenů.
+
+P0 poskytne `JellyfinNamingProfile` a jedno pevné `JellyfinDefaultOutputScheme`, vybrané explicitními registry nebo
+dependency injection namísto dynamického vyhledávání pluginů třetích stran. Oddělení existuje už v P0, aby parsery a
+planner nehardcodovaly formát, ale operátorsky definované šablony jsou pozdější rozsah.
+
+Manifest zaznamená identifikátory a verze profilu názvů i výstupního schématu. Přidání Plexu, Emby, jiného jazyka
+názvu nebo struktury jako `{{year}} - {{movie_title}} - {{provider_tag}} - {{language}}` nesmí vyžadovat změny
+parserů, výběru poskytovatele, bezpečnosti manifestu nebo provedení. Žádný kontrakt nesmí oslabit společná pravidla
+pro `.nfo`, ID poskytovatele, cesty, kolize, schválení, otisky ani dry-run.
+
 ## Zásady párování poskytovatelů
 
 Výsledek poskytovatele se nesmí přijmout pouze proto, že je první odpovědí API.
@@ -194,10 +214,11 @@ Jediný vrácený kandidát vyžaduje skóre i podobnost názvu alespoň `0.97`.
 se nejprve vyhodnotí TMDb TV a TVDB slouží jako záloha, pokud TMDb nemá kandidáta splňujícího pravidla. Pořadí
 výsledků API, popularita, grafika, dostupnost přehledu a úplnost metadat nikdy nezvyšují skóre identity.
 
-Seriál bez roku, který neprojde běžnou cestou založenou pouze na názvu, může použít názvy epizod jako další důkaz.
-Aplikace deterministicky vybere až tři vzorky: první, prostřední a poslední vhodnou epizodu, pokud možno z různých
-řad. Vynechá `Season 00`, speciály, vícedílné soubory, soubory s více epizodami, nerozpoznatelné epizody a názvy
-souborů bez použitelného názvu epizody. Jsou potřeba alespoň dva použitelné názvy epizod.
+Seriál bez roku, který neprojde běžnou cestou založenou pouze na názvu, přejde v prvním vydání ke kontrole. Pozdější
+optimalizace párování může použít názvy epizod jako další důkaz a zmenšit tuto kontrolní frontu. Deterministicky
+vybere až tři vzorky: první, prostřední a poslední vhodnou epizodu, pokud možno z různých řad. Vynechá `Season 00`,
+speciály, vícedílné soubory, soubory s více epizodami, nerozpoznatelné epizody a názvy souborů bez použitelného názvu
+epizody. Jsou potřeba alespoň dva použitelné názvy epizod.
 
 Každá vybraná kombinace řady a epizody musí u kandidáta existovat a každý název musí dosáhnout podobnosti `0.85`
 s lokalizovaným nebo původním názvem epizody od poskytovatele. Chybějící kombinace je konfliktním důkazem. Samotná
@@ -208,9 +229,10 @@ použitelných názvů a potvrzené skóre je:
 corroborated TV score = 0.75 * series title similarity + 0.25 * episode evidence
 ```
 
-Tato cesta vyžaduje podobnost názvu seriálu alespoň `0.85`, konečné skóre alespoň `0.92`, běžný náskok `0.08` a žádný
-konflikt ve vzorku. Pro jediného kandidáta nadále platí hranice `0.97`. Metadata epizod se načtou pouze pro nejlepší
-kandidáty, kteří potřebují potvrzení, čímž se omezí požadavky poskytovateli a zachová opakovatelnost výsledku.
+Tato pozdější cesta vyžaduje podobnost názvu seriálu alespoň `0.85`, konečné skóre alespoň `0.92`, běžný náskok `0.08`
+a žádný konflikt ve vzorku. Pro jediného kandidáta nadále platí hranice `0.97`. Metadata epizod se načtou pouze pro
+nejlepší kandidáty, kteří potřebují potvrzení, čímž se omezí požadavky poskytovateli a zachová opakovatelnost
+výsledku.
 
 Automaticky vybrané ID vyřeší identitu poskytovatele a přesune entitu do `ready_for_approval`; nikdy neschválí
 přejmenování. Ruční výběr může překonat nevyhovující skóre, musí však být explicitní a auditovatelný. Při nesplnění
@@ -325,11 +347,11 @@ Při prvním selhání operace se zastaví celý běh provádění. Aplikace se 
 dokončené, čekající, neúspěšné a obnovitelné operace a vytvoří neměnný JSON manifest rollbacku pouze z operací, které
 trvalý audit potvrzuje jako úspěšně dokončené.
 
-Položky rollbacku obracejí úspěšné operace v opačném pořadí provedení: dokončený cíl se stane zdrojem rollbacku a
-původní zdroj jeho cílem. Každá položka zaznamenává ID původní operace, současný otisk zdroje, očekávanou nepřítomnost
-cíle, pořadí a důvod obnovy. Manifest rollbacku zaznamenává verzi schématu, druh manifestu, ID původního běhu, digest
-původního manifestu, čas vytvoření a vlastní SHA-256 digest. Obsahuje strukturované cesty a metadata, nikdy shellové
-příkazy.
+Rollback znovu používá běžné schéma `RenameManifest` a `RenameEntry` s hodnotou `manifest_kind` nastavenou na
+`rollback`. Úspěšné operace se obrátí v opačném pořadí provedení: dokončený cíl se stane zdrojem rollbacku a původní
+zdroj jeho cílem. Pořadí seznamu určuje pořadí provedení. Každá položka zaznamenává ID původní operace a současný otisk
+zdroje. Nepřítomnost cíle je invariant executoru místo opakovaných dat položky. Manifest odkazuje na původní běh a
+digest manifestu a získá vlastní SHA-256 digest. Obsahuje strukturované cesty a metadata, nikdy shellové příkazy.
 
 Rollback používá stejný bezpečný executor manifestu. Vyžaduje ověření integrity a stavu zdroje, nepřítomný cíl,
 úspěšný dry-run a samostatné explicitní potvrzení. Existující položku nikdy nepřepíše. Výsledky provedení se zapisují
@@ -350,11 +372,14 @@ První užitečné UI má poskytovat:
 - fronty chyb parsování, nejednoznačných poskytovatelů, duplicit a nevyřešených položek;
 - úpravy na místě a výběr poskytovatele;
 - hromadné schválení, zamítnutí a odložení;
-- náhled manifestu;
+- čitelný náhled manifestu seskupený do logických dávek, který zobrazuje současné a navržené cesty, související
+  soubory, identitu poskytovatele, upozornění a chyby validace;
 - zahájení dry-run a jeho výsledky;
 - historii auditu.
 
-Statické sestavy HTML a CSV zůstávají užitečnými exporty, nejsou však hlavním kontrolním workflow.
+Surový JSON manifest zůstává ke stažení a je vstupem executoru, ale není hlavním rozhraním kontroly. Operátor
+kontroluje a schvaluje přesný digest manifestu reprezentovaný náhledem. Statické sestavy HTML a CSV zůstávají
+užitečnými exporty, nejsou však hlavním kontrolním workflow.
 
 První UI předpokládá jediného operátora na důvěryhodném počítači nebo privátní síti. Adresa naslouchání je
 konfigurovatelná a výchozí hodnota pro vývoj a kontejner je `0.0.0.0`, což umožňuje přístup z prohlížeče Windows při
@@ -434,9 +459,8 @@ probíhat verzovaným a obnovitelným procesem s návodem k záloze před potenc
 
 ## Strategie perzistence
 
-Lidská rozhodnutí a stav workflow se mají ukládat do malé aplikační databáze; preferovanou první implementací je
-SQLite. Tím se nevyžaduje samostatná databázová služba a současně je možné filtrovat, měnit stavy, pokračovat v
-kontrole a uchovávat historii auditu.
+Lidská rozhodnutí a stav workflow se v prvním vydání ukládají do SQLite. Tím se nevyžaduje samostatná databázová
+služba a současně je možné filtrovat, měnit stavy, pokračovat v kontrole a uchovávat historii auditu.
 
 Doporučené odpovědnosti úložišť:
 
@@ -472,9 +496,10 @@ automatické pravidlo nebo událost provedení, která vyvolá přechod, musí b
 ### Fáze 0: Sladit produktovou dokumentaci
 
 - Přijmout nebo upravit rozhodnutí v tomto zadání.
-- Vyřešit níže uvedená otevřená produktová rozhodnutí.
+- Vyřešit produktová rozhodnutí zaznamenaná v tomto zadání.
 - Sladit terminologii a stav fází v `PROJECT-DESCRIPTION.md`, `DEVELOPMENT_PLAN.md` a obou README.
-- Přidat architektonická rozhodnutí o perzistenci, nasazení UI, bezpečnosti kontejneru a provádění manifestu.
+- Zaznamenat zde produktové architektonické hranice. Zaměřená ADR vytvořit s odpovídající implementační prací, až
+  budou navrhována konkrétní schémata, rozhraní nebo soubory nasazení.
 
 ### Fáze 1: Opravit analytický model
 
@@ -483,33 +508,41 @@ automatické pravidlo nebo událost provedení, která vyvolá přechod, musí b
 - Seskupit nalezené soubory do entit.
 - Zapojit ověřování konzistence do produkčního procesu.
 - Zabránit automatickému schválení neúspěšných entit a entit s nízkou jistotou.
+- Ukládat běhy, entity, stav kontroly, opravy, schválení a metadata auditu do SQLite.
 
 ### Fáze 2: Umožnit kontrolu párování poskytovatelů
 
 - Vracet více kandidátů poskytovatele.
 - Přidat vysvětlitelné skóre a prahy nejednoznačnosti.
 - Trvale ukládat vybrané shody a ruční opravy.
-- Do doby vytvoření UI nabídnout příkazy CLI pro prohlížení a výběr kandidátů.
+- Seriály bez roku, které nesplní prahy samotného názvu, ponechat ke kontrole; potvrzení názvy epizod je pozdější
+  optimalizace.
 
-### Fáze 3: Implementovat plánování přejmenování
+### Fáze 3: Implementovat minimální UI pro kontrolu člověkem
+
+- Přidat filtrovatelné a stránkované fronty položek ke kontrole a nevyřešených položek.
+- Podporovat opravy, výběr poskytovatele, schválení, zamítnutí, odložení a bezpečné hromadné akce.
+- Všechny změny stavů vést přes stejné služby a ověřovací brány jako CLI.
+- Skutečné změny souborového systému ponechat mimo první UI.
+
+### Fáze 4: Implementovat plánování přejmenování
 
 - Přidat verzované modely `RenameEntry` a `RenameManifest`.
+- Přidat pluggable kontrakty `NamingProfile` a `OutputScheme` s `JellyfinNamingProfile` a jedním pevným výchozím
+  schématem; výstup parserů ponechat neutrální a konfigurovatelné šablony odložit.
 - Generovat deterministické cílové cesty složek, videí a podporovaných souvisejících souborů.
 - Odmítat nevyřešené, neschválené, neplatné nebo konfliktní položky.
-- Ukládat neměnné manifesty a čitelné náhledy.
+- Ukládat neměnné manifesty a zpřístupnit v UI čitelné náhledy před/po seskupené do dávek pro schválení přesného
+  digestu. Surový JSON ponechat jako artefakt, nikoli hlavní kontrolní rozhraní.
 
-### Fáze 4: Implementovat bezpečné provádění
+### Fáze 5: Implementovat bezpečné provádění
 
 - Přidat výchozí dry-run.
 - Ověřovat stav zdroje a bezpečnost cíle.
 - Vyžadovat explicitní potvrzení skutečného provedení.
-- Přidat hranice dávek, trvalé stavy auditu, zastavení při chybě a neměnné manifesty rollbacku.
-
-### Fáze 5: Implementovat UI pro kontrolu člověkem
-
-- Přidat nastavení, přehled, kontrolu, výběr poskytovatele a hromadné akce.
-- Přidat náhled manifestu, výsledky dry-run a historii auditu. Pro první vydání UI ponechat skutečné provedení v CLI.
-- Všechny změny stavů vést přes stejné služby a ověřovací brány jako CLI.
+- Přidat hranice dávek, trvalé stavy auditu, zastavení při chybě a manifesty rollbacku používající sdílené schéma
+  manifestu.
+- Zpřístupnit výsledky dry-run a historii auditu v UI, ale skutečné provedení ponechat v CLI.
 
 ### Fáze 6: Zabalit produkt pro kontejnerové nasazení
 
@@ -521,6 +554,7 @@ automatické pravidlo nebo událost provedení, která vyvolá přechod, musí b
 
 ### Fáze 7: Provozně zpevnit produkt
 
+- Po změření skutečné kontrolní fronty seriálů bez roku přidat volitelné potvrzení názvy epizod.
 - Přidat obnovitelné dlouhé úlohy a jasné zobrazení průběhu.
 - Přidat korelační ID běhu a trvalé provozní protokoly.
 - Přidat koncovou dokumentaci, řešení potíží, zálohování a cvičení obnovy.
@@ -670,14 +704,26 @@ Po přijetí tohoto zadání aktualizujte stávající dokumenty následovně.
   poskytovatele. Jediný kandidát vyžaduje skóre i podobnost názvu `0.97`.
 - Filmy vyžadují přesný rok. Seriály vyžadují přesný spolehlivě parsovaný vstupní rok, pokud je přítomen; seriál bez
   roku lze vybrat na základě dostatečně silného důkazu názvu.
-- Seriál bez roku může jako potvrzení použít dva nebo tři deterministicky vybrané názvy epizod. Potvrzené skóre
-  používá 75 % podobnosti názvu seriálu a 25 % průměrné podobnosti názvů epizod. Každý název epizody i název seriálu
-  musí dosáhnout `0.85`, konečné skóre musí dosáhnout `0.92` a každá vybraná kombinace řady a epizody musí existovat.
+- Seriál bez roku, který neprojde skórováním samotného názvu, přejde v prvním vydání ke kontrole. Pozdější optimalizace
+  může jako potvrzení použít dva nebo tři deterministicky vybrané názvy epizod podle zdokumentovaného skóre 75/25 a
+  prahů.
 - Automatický výběr poskytovatele pouze vytvoří stav `ready_for_approval`; nikdy neschválí přejmenování. Ruční změny
   jsou explicitní a auditovatelné.
 - Prahy jsou pojmenované a verzované konstanty zásad, které operátor v prvním vydání nemůže snížit. Výběry z
   mezipaměti se automaticky použijí jen tehdy, pokud byly dříve schváleny podle stejné verze zásad a vstupy se
   nezměnily.
+
+### Hranice profilu názvů a výstupního schématu
+
+- Parsery a seskupené entity obsahují data nezávislá na mediálním serveru a nikdy nehardcodují výstupní názvy nebo
+  cesty.
+- P0 definuje pluggable kontrakty `NamingProfile` a `OutputScheme` a dodá explicitně vybrané
+  `JellyfinNamingProfile` a jedno pevné `JellyfinDefaultOutputScheme`. Runtime vyhledávání pluginů třetích stran ani
+  konfigurovatelné šablony nejsou vyžadované.
+- Manifesty zaznamenávají identifikátory a verze obou komponent. Vykreslený výstup prochází všemi společnými
+  validačními a bezpečnostními branami.
+- Implementace Plex a Emby jsou pozdější práce. Emby může být aliasem Jellyfin pouze po potvrzení shodných požadavků
+  na výstup testy kompatibility.
 
 ### Počáteční nasazení webového UI
 
@@ -687,8 +733,9 @@ Po přijetí tohoto zadání aktualizujte stávající dokumenty následovně.
   má výchozí hodnotu `0.0.0.0`. Naslouchání mimo loopback zobrazí upozornění, ale je povolené.
 - Autentizace, účty, role, TLS spravované aplikací a integrace se Synology účtem nejsou požadavky prvního vydání.
   Integrace se Synology účtem zůstává volitelná.
-- UI podporuje kontrolu, opravy, schvalování, náhled manifestu a dry-run, ale nemá endpoint skutečného přejmenování.
-  Skutečné provedení zůstává v CLI za všemi existujícími bezpečnostními branami.
+- UI podporuje kontrolu, opravy, schvalování, čitelný náhled manifestu před/po seskupený do dávek, schválení jeho
+  přesného digestu a dry-run. Surový JSON zůstává ke stažení, ale není hlavním kontrolním pohledem. UI nemá endpoint
+  skutečného přejmenování; skutečné provedení zůstává v CLI za všemi existujícími bezpečnostními branami.
 - Autentizace, session, ochrana CSRF, návod k HTTPS reverse proxy a zabezpečení vzdáleného přístupu jsou pozdější
   nadstavbou, nikoli překážkou funkčního UI.
 
@@ -711,9 +758,9 @@ Po přijetí tohoto zadání aktualizujte stávající dokumenty následovně.
 - První neúspěšná operace zastaví celý běh provádění. Aplikace nikdy automaticky nespustí rollback.
 - Trvalý audit rozlišuje dokončené, neúspěšné, čekající a nejisté operace. Do neměnného JSON manifestu rollbacku
   vstoupí v opačném pořadí provedení pouze potvrzené úspěšné operace.
-- Každá obrácená položka odkazuje na původní operaci a ukládá zdroj a cíl rollbacku, otisk zdroje, očekávanou
-  nepřítomnost cíle, pořadí a důvod. Manifest odkazuje na původní běh a digest manifestu a má vlastní verzi schématu
-  a SHA-256 digest. Nikdy neobsahuje shellové příkazy.
+- Rollback používá běžné schéma manifestu a položky s `manifest_kind: rollback`. Každá obrácená položka odkazuje na
+  původní operaci a ukládá obrácené cesty a současný otisk zdroje. Pořadí seznamu určuje pořadí provedení, nepřítomnost
+  cíle vynucuje executor a manifest má vlastní SHA-256 digest. Nikdy neobsahuje shellové příkazy.
 - Rollback používá běžný executor a vyžaduje ověření, dry-run, explicitní potvrzení a audit. Nikdy nepřepisuje
   existující cestu ani nemění vstupní manifest.
 - Operátor volí mezi provedením rollbacku a zachováním dokončených operací s vytvořením nového workflow pro zbývající
@@ -739,6 +786,53 @@ Po přijetí tohoto zadání aktualizujte stávající dokumenty následovně.
 - Compose uvádí `:ro` a `:rw` přímo. Proměnné režimy mountu a zapisovatelná média webové služby jsou zakázané.
 - Zapisovatelný mount poskytuje pouze schopnost zápisu; všechny brány integrity manifestu, otisků zdrojů,
   bezpečnosti cílů, úspěšného dry-run, potvrzení, zastavení při chybě, rollbacku a auditu zůstávají povinné.
+
+### Perzistence
+
+- První vydání používá SQLite pro měnitelný stav workflow, lidská rozhodnutí a metadata auditu.
+- Verzované neměnné manifesty přejmenování a rollbacku zůstávají artefakty JSON s kanonickou serializací a digesty.
+- Operátoři používají workflow CLI a UI namísto přímé editace stavu v SQLite, JSON nebo YAML.
+- Upgrade schématu používá verzované a obnovitelné migrace s návodem k záloze.
+
+## Seznam budoucích možností
+
+Tyto položky jsou možné navazující směry, nikoli přijatý rozsah prvního vydání. Každá před implementací potřebuje
+zaměřené produktové rozhodnutí, issue, příklady názvů, průzkum kompatibility a testy. Neblokují milník připravenosti
+pro operátora.
+
+### Další profily názvů pro mediální servery
+
+- Pluggable hranice `NamingProfile` je součástí P0, zatímco Jellyfin zůstává jedinou podporovanou implementací v
+  prvním vydání.
+- Lze zvážit profil pro Plex s vlastním ověřeným zápisem tagů poskytovatele a pravidly názvů filmů, seriálů, řad a
+  epizod. Přesnou syntaxi Plexu je nutné prozkoumat a otestovat při přijetí této práce; toto zadání ji nepředepisuje.
+- Emby lze považovat za alias profilu Jellyfin pouze tehdy, když testy kompatibility prokážou shodný požadovaný
+  výstup; jinak musí mít samostatný profil.
+- Další profily mediálních serverů lze přidat, pokud zapadnou do základního modelu entit a manifestů bez oslabení
+  bezpečnosti.
+- Workflow Kodi, která vyžadují, aby tato aplikace četla, generovala nebo spravovala soubory `.nfo`, zůstávají mimo
+  rozsah. Nezměnitelné pravidlo pro `.nfo` platí pro každý profil.
+
+### Zobecněná politika jazyků a lokalizace
+
+- Česká lokalizace a současná značka `CZ` v názvu souboru zůstávají výchozími hodnotami prvního vydání.
+- Pozdější politika může oddělit preferovaný jazyk metadat, pořadí záložních zdrojů zobrazovaného názvu, značky
+  jazyka zvuku a značky jazyka titulků namísto jediného nastavení.
+- Návrh má používat ověřené jazykové tagy a explicitní mapování do názvů souborů, zachovat neznámé zdrojové značky ke
+  kontrole a bez upozornění nepřekládat ani nepřepisovat zobrazované názvy.
+- Budoucí volby lokalizace předají ověřená sémantická pole do `OutputScheme`; nepřidávají lokalizační větvení do
+  parserů ani jednotlivých profilů názvů.
+
+### Omezené šablony názvů
+
+- Rozšířit `OutputScheme` o pojmenované předvolby a omezené šablony pro soubory filmů, složky seriálů a řad, epizody,
+  související soubory, verze a části vícedílných médií.
+- Zpřístupnit jen zdokumentované typované tokeny a ověřené podmínky. Nepovolit spouštění libovolného kódu ani
+  neomezený univerzální šablonovací engine.
+- Každý vykreslený název zobrazit v náhledu a odmítnout prázdná pole, neplatné části cest, kolize, nejednoznačný výstup
+  a struktury porušující vybraný profil.
+- Šablony mohou měnit prezentaci, ale nesmějí obcházet počet ID poskytovatelů, izolaci `.nfo`, schválení manifestu,
+  otisky zdrojů, dry-run ani bezpečnostní pravidla executoru.
 
 ## Vyřešená produktová rozhodnutí
 

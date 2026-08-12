@@ -73,7 +73,26 @@ role cannot be determined is incompatible and cannot enter provider selection, a
 `.nfo` files are always ignored and never enter the domain model or a standalone filesystem operation. They may move
 only as children of a renamed parent directory.
 
-## Naming Conventions
+## Naming Profile And Output Scheme Boundary
+
+Parsers and entity analysis produce media-server-neutral title, year, language, provider, episode, version, and
+component fields. They never assemble target filenames or directory names. The planner uses two pluggable contracts:
+
+- `NamingProfile` defines and validates media-server compatibility rules, including provider tags, directory
+  structure, episode notation, required fields, and compatible output schemes;
+- `OutputScheme` renders validated semantic fields into path components, controlling title language, language
+  markers, optional presentation fields, and token order.
+
+The first release implements `JellyfinNamingProfile` and one fixed `JellyfinDefaultOutputScheme`, selected through
+explicit registries or dependency injection. It does not implement configurable templates or a dynamic third-party
+plugin system. Every manifest records identifiers and versions for both components. Future Plex or Emby profiles and
+output schemes may change compatibility or presentation without changing parsing, provider selection, manifest
+safety, or execution. An Emby alias may reuse Jellyfin only after compatibility tests prove identical requirements.
+
+All naming profiles and output schemes remain subject to shared path, collision, provider-ID, `.nfo`, approval,
+fingerprint, dry-run, and execution rules.
+
+## Jellyfin Naming Conventions
 
 ### Movies
 
@@ -185,10 +204,11 @@ Automatic selection requires score `0.92`, title similarity `0.90`, and a `0.08`
 the same provider. A sole candidate requires score and title similarity `0.97`. API ordering, popularity, artwork,
 overview availability, and metadata completeness do not contribute to identity scoring.
 
-A yearless TV series may use provider episode titles as additional evidence when title-only scoring is insufficient.
-Up to three suitable episodes are sampled deterministically as the first, middle, and last usable episode, preferably
-across different seasons. At least two samples with usable episode titles are required. Specials, `Season 00`,
-multipart or multi-episode files, and unparseable episodes are excluded.
+A yearless TV series that does not pass title-only scoring enters review in the first release. A later matching
+optimization may use provider episode titles as additional evidence. Up to three suitable episodes are then sampled
+deterministically as the first, middle, and last usable episode, preferably across different seasons. At least two
+samples with usable episode titles are required. Specials, `Season 00`, multipart or multi-episode files, and
+unparseable episodes are excluded.
 
 Every sampled season and episode coordinate must exist for the candidate, and every sampled title must have at least
 `0.85` similarity to a localized or original provider episode title. The corroborated score uses 75% series-title
@@ -211,7 +231,8 @@ unchanged identity inputs; other cached results require rescoring or review.
 - Side effects are isolated to the executor layer
 - Ambiguous or low-confidence items are always routed to review, never automated
 - Readable filesystem structure is the priority
-- Symbolic links are always rejected and never followed, modeled, planned, or renamed
+- Symbolic links are unsupported and incompatible everywhere in the workflow. They are never followed, modeled,
+  planned, or renamed, and review cannot override their rejection
 
 ## Source-State Safety
 
@@ -222,8 +243,8 @@ media content and does not use inode number, creation time, ownership, or permis
 A renamed directory uses a SHA-256 tree digest over a canonically sorted inventory. Every descendant contributes its
 relative path and entry type; managed regular files also contribute size and modification time. Ignored children,
 including `.nfo`, contribute only opaque membership and are never opened, parsed, modeled, or assigned a standalone
-manifest entry. A symbolic link is always invalid, is never followed, and blocks its containing directory from
-planning and execution.
+manifest entry. A symbolic link is always unsupported and incompatible, is never followed, and blocks its containing
+directory from planning and execution. It cannot be accepted through review.
 
 The manifest has a separate SHA-256 digest over its canonical serialization. Dry-run is valid only for the exact
 manifest digest and matching source fingerprints. Source state is revalidated during dry-run, immediately before
@@ -237,10 +258,10 @@ The first failed rename stops the complete execution run. The application does n
 Instead, its durable audit identifies confirmed successful, failed, pending, and uncertain operations. Only confirmed
 successful operations are reversed, in reverse execution order, into an immutable JSON rollback manifest.
 
-Each rollback entry links to the original operation and contains the current source path, original target path,
-source fingerprint, expected absent target, sequence, and recovery reason. The manifest records its schema and kind,
-the original run and manifest digest, creation time, and its own SHA-256 digest. It stores structured data rather than
-shell commands.
+Rollback reuses the normal `RenameManifest` and `RenameEntry` schema with `manifest_kind` set to `rollback`. Each
+entry links to the original operation and contains the reverse paths and current source fingerprint. List order
+defines execution order, while target absence remains an executor invariant. The manifest links to the original run
+and manifest digest and has its own SHA-256 digest. It stores structured data rather than shell commands.
 
 The normal manifest executor handles rollback. Source state and target absence are validated again, dry-run is
 mandatory, real rollback requires explicit confirmation, and every result is written to a separate audit. Rollback
@@ -254,9 +275,12 @@ address is configurable and defaults to `0.0.0.0` so a Windows browser can reach
 container. Listening outside loopback emits a warning but does not prevent startup. Host firewall rules and Compose
 port publishing define which trusted devices can connect.
 
-The initial UI supports setup, analysis, review, correction, approval, manifest preview, audit history, and dry-run.
-It has no endpoint for real rename execution. Actual filesystem changes remain CLI-only and still require a validated
-manifest, successful dry-run, and separate explicit confirmation. State-changing UI routes never use `GET`.
+The initial UI supports setup, analysis, review, correction, approval, audit history, and dry-run. Its manifest view
+is a human-readable before/after diff grouped into logical batches, including associated files, provider identity,
+warnings, validation failures, and the exact digest being approved. Raw JSON remains downloadable as executor input
+but is not the primary review view. The UI has no endpoint for real rename execution. Actual filesystem changes
+remain CLI-only and still require a validated manifest, successful dry-run, and separate explicit confirmation.
+State-changing UI routes never use `GET`.
 
 Public Internet and untrusted-network exposure are unsupported. Authentication, accounts, roles, sessions, CSRF
 protection, application-managed TLS, HTTPS reverse-proxy guidance, and remote-access hardening are later add-ons.
@@ -292,6 +316,15 @@ Compose records `:ro` and `:rw` literally; an environment variable never switche
 mutation, the executor acquires a global execution lock in the workspace. The writable mount and lock do not bypass
 manifest integrity, source fingerprint, target safety, successful dry-run, explicit confirmation, stop-on-failure,
 rollback, or audit requirements.
+
+## Persistence
+
+The first release uses SQLite for mutable workflow state, including runs, grouped media entities, provider
+candidates, corrections, approvals, notes, state transitions, and audit metadata. Versioned immutable rename and
+rollback manifests remain JSON artifacts. Operators are not expected to edit either storage format directly.
+
+Schema changes use versioned, recoverable migrations. Container upgrades preserve the workspace database and
+artifacts and provide backup guidance before a potentially incompatible migration.
 
 ## Implementation
 
@@ -364,42 +397,47 @@ Provider IDs are resolved in this priority order:
 
 Items classified as `unknown` are skipped entirely.
 
-### Implementation Phases
+### Current Implementation Snapshot
 
-| #   | Phase                                 | Status         |
-| --- | ------------------------------------- | -------------- |
-| 1   | Inventory and scan                    | ✅ Implemented |
-| 2   | Classification                        | ✅ Implemented |
-| 3   | Name normalization                    | ✅ Implemented |
-| 4   | Validation                            | ✅ Implemented |
-| 5   | Provider ID lookup                    | 🚧 Partial     |
-| 6   | Rename planning (manifest generation) | ⏳ Planned     |
-| 7   | Batch rename execution                | ⏳ Planned     |
-| 8   | Review workflow (HTML/CSV reports)    | ⏳ Planned     |
+<!-- markdownlint-disable MD013 -->
+| #   | Capability                         | Status                                                |
+| --- | ---------------------------------- | ----------------------------------------------------- |
+| 1   | Inventory and scan                 | Partial: supported video files only                   |
+| 2   | Classification and entity grouping | Partial: flat file classification only                |
+| 3   | Name normalization                 | Partial: basic filename parsing only                  |
+| 4   | Validation                         | Partial: per-file checks; grouped consistency missing |
+| 5   | Provider ID lookup and selection   | Partial: basic resolver chain and first-result match  |
+| 6   | Rename planning                    | Not started                                           |
+| 7   | Batch rename execution             | Not started                                           |
+| 8   | Static review exports              | Partial: JSON and HTML implemented; CSV missing       |
+| 9   | Interactive review and approval UI | Not started                                           |
+<!-- markdownlint-enable MD013 -->
 
 #### Phase 1 — Inventory and Scan
 
-Scans the media library and collects file paths, folder structure, and filename patterns.
-Detects supported video extensions. Produces a flat list of `MediaItem` objects used as input for all following phases.
+The current scanner detects supported video extensions and produces a flat list of `MediaItem` objects. Complete
+directory, subtitle, ignored-file, depth-limit, and symbolic-link inventory is still required for safe grouping and
+planning.
 
 #### Phase 2 — Classification
 
-Each item is classified into one of: `movie`, `tv_episode`, or `unknown`.
+The current implementation classifies each flat video item as `movie`, `tv_episode`, or `unknown`.
 
 Classification is based on filename patterns: a year in parentheses indicates a movie; an `SxxExx` marker
-(or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`.
+(or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`. Directory-role
+classification and grouping files into movie, TV series, episode, and associated-file entities are not implemented.
 
 #### Phase 3 — Name Normalization
 
-Normalized names are parsed into structured `ParsedName` objects containing title, year, season/episode, language code,
-and subtitle flags. Release tags (codec names, resolutions, quality markers) are stripped before parsing.
+Basic normalized names are parsed into `ParsedName` objects containing title, year, season or episode coordinates,
+language code, and subtitle flags. Release tags are stripped before parsing. The accepted multipart, version,
+associated-file, display-title, and strict TV-layout rules are not yet implemented completely.
 
 #### Phase 4 — Validation
 
-All parsed items are validated for structural completeness and internal consistency.
-Each item receives a `ValidationStatus` (`passed`, `review_needed`, or `failed`)
-and a `ConfidenceLevel` (`high`, `medium`, or `low`). High-confidence items proceed automatically;
-others are flagged for review.
+Parsed items receive per-file structural validation, a `ValidationStatus` (`passed`, `review_needed`, or `failed`),
+and a `ConfidenceLevel` (`high`, `medium`, or `low`). A consistency validator exists, but grouped consistency is not
+integrated into the production workflow. No item is considered approved merely because per-file validation passes.
 
 #### Phase 5 — Provider ID Lookup
 
@@ -410,8 +448,9 @@ The result for each resolved item is a `ProviderMatch` object containing: `provi
 `reason`, and `lookup_key`. Items without a match are written to the unresolved report.
 
 The current online resolver accepts the first returned result with fixed confidence. Multiple candidates,
-explainable scoring, ambiguity thresholds, episode-title corroboration, policy-versioned cache reuse, and persisted
-selection provenance remain to be implemented before this phase satisfies the product policy.
+explainable scoring, ambiguity thresholds, policy-versioned cache reuse, and persisted selection provenance remain
+to be implemented before this phase satisfies the product policy. Episode-title corroboration is a later
+optimization rather than a first-release requirement.
 
 #### Phase 6 — Rename Planning *(planned)*
 
@@ -426,10 +465,16 @@ Renames will be executed in logical batches (movies by folder, TV series one sho
 has been reviewed. The executor will support audit logging, collision detection, immediate stop on failure, and
 explicit rollback through an immutable reverse manifest. Automatic rollback is not supported.
 
-#### Phase 8 — Review Workflow *(planned)*
+#### Phase 8 — Static Review Exports *(partial)*
 
-Items flagged for review will be exported in additional formats (HTML, CSV) to allow manual inspection outside of JSON.
-This phase has no side effects on the filesystem.
+JSON and HTML review and unresolved reports exist. CSV export remains planned. Report generation has no side effects
+on the media library.
+
+#### Phase 9 — Interactive Review And Approval UI *(planned)*
+
+A minimum web UI will provide persistent, filterable, paginated review queues, corrections, provider selection,
+approvals, rejections, deferral, notes, and safe bulk actions. It may expose planning and dry-run results but has no
+endpoint for real filesystem execution in the first release.
 
 ## Expected Outcome
 

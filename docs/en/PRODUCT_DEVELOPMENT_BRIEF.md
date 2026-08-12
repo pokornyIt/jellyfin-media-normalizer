@@ -88,8 +88,9 @@ dependency management.
   execution.
 - Every attempted operation must be recorded in an audit log suitable for manual recovery.
 - Low-confidence, conflicting, or ambiguous results must require human review.
-- Symbolic links are always rejected. The application never follows, models, plans, or renames them. A symbolic link
-  inside a directory that would otherwise be renamed blocks that directory from planning.
+- Symbolic links are an unsupported filesystem entry type everywhere in the workflow. The application reports them
+  as incompatible and never follows, models, plans, or renames them. Review cannot override this rule. A symbolic
+  link inside a directory that would otherwise be renamed blocks that directory from planning.
 
 ## Required Domain Model
 
@@ -167,6 +168,25 @@ A selected provider match must record:
 - who or what selected it and when;
 - the entity to which the selection belongs.
 
+### Naming Profile And Output Scheme
+
+Parsing and entity analysis produce media-server-neutral fields and never render target filenames or directory
+names. Two cooperating pluggable contracts separate compatibility from presentation:
+
+- `NamingProfile` defines media-server rules such as supported provider tags, required directory structure, episode
+  notation, mandatory fields, and the output schemes compatible with that server;
+- `OutputScheme` renders validated semantic fields into path components, including title language, language markers,
+  and token order.
+
+P0 provides `JellyfinNamingProfile` and one fixed `JellyfinDefaultOutputScheme`, selected through explicit registries
+or dependency injection rather than dynamic third-party plugin discovery. The separation exists in P0 so parsers and
+the planner do not hardcode formatting, but operator-defined templates are later scope.
+
+The manifest records identifiers and versions for both the naming profile and output scheme. Adding Plex, Emby, a
+different title language, or a layout such as `{{year}} - {{movie_title}} - {{provider_tag}} - {{language}}` must not
+require changes to parsers, provider selection, manifest safety, or execution. Neither contract can weaken the shared
+`.nfo`, provider-ID, path, collision, approval, fingerprint, or dry-run rules.
+
 ## Provider Matching Policy
 
 Provider results must not be accepted solely because they are the first API result.
@@ -200,10 +220,11 @@ for movies. For TV series, TMDb TV is evaluated first and TVDB is a fallback whe
 the policy. API result order, popularity, artwork, overview availability, and metadata completeness never increase
 the identity score.
 
-A yearless TV series that does not pass the normal title-only path may use episode-title evidence. The application
-selects up to three deterministic samples: the first, middle, and last suitable episode, preferably from different
-seasons. `Season 00`, specials, multipart files, multi-episode files, unparseable episodes, and filenames without a
-usable episode title are excluded. At least two usable episode titles are required.
+A yearless TV series that does not pass the normal title-only path enters review in the first release. A later
+matching optimization may use episode-title evidence to reduce this review queue. It selects up to three
+deterministic samples: the first, middle, and last suitable episode, preferably from different seasons. `Season 00`,
+specials, multipart files, multi-episode files, unparseable episodes, and filenames without a usable episode title
+are excluded. At least two usable episode titles are required.
 
 Each sampled season and episode coordinate must exist for the candidate, and every sampled title must reach `0.85`
 similarity against the provider's localized or original episode title. A missing coordinate is conflicting evidence.
@@ -214,9 +235,9 @@ the average title similarity of the usable samples, and the corroborated score i
 corroborated TV score = 0.75 * series title similarity + 0.25 * episode evidence
 ```
 
-This path requires a series-title similarity of at least `0.85`, a final score of at least `0.92`, the normal `0.08`
-lead, and no sampled conflict. The sole-candidate `0.97` rule still applies. Episode metadata is requested only for
-the leading candidates that need corroboration, limiting provider requests and keeping the result reproducible.
+This later path requires a series-title similarity of at least `0.85`, a final score of at least `0.92`, the normal
+`0.08` lead, and no sampled conflict. The sole-candidate `0.97` rule still applies. Episode metadata is requested only
+for the leading candidates that need corroboration, limiting provider requests and keeping the result reproducible.
 
 An automatically selected ID resolves provider identity and moves the entity to `ready_for_approval`; it never
 approves a rename. A manual selection may override a score failure but must be explicit and auditable. If any
@@ -332,11 +353,12 @@ On the first operation failure, the complete execution run stops. The applicatio
 rollback. It reports completed, pending, failed, and recoverable operations and creates an immutable JSON rollback
 manifest from only the operations that the durable audit confirms as successfully completed.
 
-Rollback entries reverse successful operations in reverse execution order: the completed target becomes the
-rollback source and the original source becomes the rollback target. Each entry records the original operation ID,
-current source fingerprint, expected absent target, sequence, and recovery reason. The rollback manifest records its
-schema version, manifest kind, original run ID, original manifest digest, creation time, and its own SHA-256 digest.
-It contains structured paths and metadata, never shell commands.
+Rollback reuses the normal `RenameManifest` and `RenameEntry` schema with `manifest_kind` set to `rollback`.
+Successful operations are reversed in reverse execution order: the completed target becomes the rollback source and
+the original source becomes the rollback target. List order defines execution order. Each entry records the original
+operation ID and current source fingerprint. Target absence is an executor invariant rather than repeated entry
+data. The manifest links to the original run and manifest digest and receives its own SHA-256 digest. It contains
+structured paths and metadata, never shell commands.
 
 Rollback execution uses the same safe manifest executor. It requires integrity and source-state validation, an
 absent target, a successful dry-run, and separate explicit confirmation. It never overwrites an existing entry.
@@ -357,11 +379,14 @@ The first useful UI should provide:
 - review queues for parse errors, provider ambiguity, duplicates, and unresolved items;
 - inline editing and provider selection;
 - bulk approve, reject, and defer actions;
-- manifest preview;
+- a human-readable manifest preview grouped into logical batches, showing current and proposed paths, associated
+  files, provider identity, warnings, and validation failures;
 - dry-run initiation and results;
 - audit history.
 
-Static HTML and CSV reports remain useful as exports, but they are not the primary review workflow.
+The raw JSON manifest remains downloadable and is the executor input, but it is not the primary review interface.
+The operator reviews and approves the exact manifest digest represented by the preview. Static HTML and CSV reports
+remain useful as exports, but they are not the primary review workflow.
 
 The first UI assumes one operator on a trusted machine or private network. Its bind address is configurable and the
 development and container default is `0.0.0.0`, allowing access from a Windows browser while the application runs in
@@ -443,9 +468,8 @@ a versioned and recoverable process, with backup guidance provided before potent
 
 ## Persistence Strategy
 
-Human decisions and workflow state should be stored in a small application database, with SQLite as the preferred
-initial implementation. This avoids requiring a separate database service while supporting filtering, state
-transitions, resumable review, and audit history.
+Human decisions and workflow state are stored in SQLite in the first release. This avoids requiring a separate
+database service while supporting filtering, state transitions, resumable review, and audit history.
 
 Recommended storage responsibilities:
 
@@ -481,10 +505,11 @@ automatic rule, or execution event causing a transition must be auditable.
 ### Stage 0: Align Product Documentation
 
 - Accept or amend the decisions in this brief.
-- Resolve the open product decisions listed below.
+- Resolve the product decisions recorded in this brief.
 - Update `PROJECT-DESCRIPTION.md`, `DEVELOPMENT_PLAN.md`, `README.md`, and `README.cs.md` so their terminology and
   phase status agree.
-- Add architecture decisions for persistence, UI deployment, container safety, and manifest execution safety.
+- Record product-level architecture boundaries here. Create focused ADRs with the corresponding implementation work
+  when concrete schemas, interfaces, or deployment files are designed.
 
 ### Stage 1: Correct The Analysis Model
 
@@ -493,33 +518,41 @@ automatic rule, or execution event causing a transition must be auditable.
 - Group scanned files into entities.
 - Integrate consistency validation into the production pipeline.
 - Prevent failed or low-confidence entities from automatic approval.
+- Persist runs, entities, review state, corrections, approvals, and audit metadata in SQLite.
 
 ### Stage 2: Make Provider Matching Reviewable
 
 - Return multiple provider candidates.
 - Add explainable scoring and ambiguity thresholds.
 - Persist selected matches and manual corrections.
-- Provide CLI commands for inspecting and selecting candidates until the UI is available.
+- Keep yearless series that do not meet title-only thresholds in review; episode-title corroboration is a later
+  optimization.
 
-### Stage 3: Implement Rename Planning
+### Stage 3: Implement The Minimum Human Review UI
+
+- Add filterable and paginated review and unresolved queues.
+- Support corrections, provider selection, approve, reject, defer, and safe bulk actions.
+- Keep all state changes behind the same services and validation gates used by the CLI.
+- Keep real filesystem execution out of the first UI.
+
+### Stage 4: Implement Rename Planning
 
 - Add versioned `RenameEntry` and `RenameManifest` models.
+- Add the pluggable `NamingProfile` and `OutputScheme` contracts with `JellyfinNamingProfile` and one fixed default
+  scheme; keep parsers output-neutral and defer configurable templates.
 - Generate deterministic target paths for folders, videos, and supported associated files.
 - Reject unresolved, unapproved, invalid, or conflicting entries.
-- Persist immutable manifests and readable previews.
+- Persist immutable manifests and expose readable batch-grouped before/after previews for exact-digest approval in the
+  UI. Keep raw JSON available as an artifact, not as the primary review interface.
 
-### Stage 4: Implement Safe Execution
+### Stage 5: Implement Safe Execution
 
 - Add default dry-run execution.
 - Verify source state and destination safety.
 - Require explicit real-execution confirmation.
-- Add batch boundaries, durable audit states, stop-on-failure handling, and immutable rollback manifests.
-
-### Stage 5: Implement The Human Review UI
-
-- Add setup, dashboard, review, provider selection, and bulk actions.
-- Add manifest preview, dry-run results, and audit history. Keep real execution in the CLI for the first UI release.
-- Keep all state changes behind the same services and validation gates used by the CLI.
+- Add batch boundaries, durable audit states, stop-on-failure handling, and rollback manifests using the shared
+  manifest schema.
+- Expose dry-run results and audit history in the UI while keeping real execution in the CLI.
 
 ### Stage 6: Package For Container Deployment
 
@@ -531,6 +564,7 @@ automatic rule, or execution event causing a transition must be auditable.
 
 ### Stage 7: Operational Hardening
 
+- Add optional episode-title corroboration after measuring the real yearless-series review queue.
 - Add resumable long-running jobs and clear progress reporting.
 - Add run correlation IDs and persistent operational logs.
 - Add end-to-end documentation, troubleshooting, backup guidance, and recovery exercises.
@@ -679,13 +713,24 @@ When this brief is accepted, update the existing documents as follows.
   from the same provider. A sole candidate requires score and title similarity `0.97`.
 - Movies require an exact year. TV series require an exact reliably parsed input year when present; a yearless series
   may be selected from sufficiently strong title evidence.
-- A yearless series may use two or three deterministically sampled episode titles as corroboration. The corroborated
-  score uses 75% series-title similarity and 25% average episode-title similarity. Each episode-title match and the
-  series title must reach `0.85`, the final score must reach `0.92`, and every sampled coordinate must exist.
+- A yearless series that does not pass title-only scoring enters review in the first release. A later optimization may
+  use two or three deterministically sampled episode titles as corroboration, using the documented 75/25 score and
+  thresholds.
 - Automatic provider selection only produces `ready_for_approval`; it never approves a rename. Manual overrides are
   explicit and auditable.
 - Thresholds are named, versioned policy constants that operators cannot lower in the first release. Cached
   selections are reused automatically only when previously approved under the same policy and unchanged inputs.
+
+### Naming Profile And Output Scheme Boundary
+
+- Parsers and grouped entities contain media-server-neutral data and never hardcode output filenames or paths.
+- P0 defines pluggable `NamingProfile` and `OutputScheme` contracts and ships `JellyfinNamingProfile` with one fixed
+  `JellyfinDefaultOutputScheme` through explicit selection. Runtime discovery of third-party plugins and configurable
+  templates are not required.
+- Manifests record identifiers and versions for both components. Rendered output passes all shared validation and
+  safety gates.
+- Plex and Emby implementations are later work. Emby may alias Jellyfin only after compatibility tests prove identical
+  output requirements.
 
 ### Initial Web UI Deployment
 
@@ -695,8 +740,9 @@ When this brief is accepted, update the existing documents as follows.
   LAN access. Listening outside loopback produces a warning but is allowed.
 - Authentication, accounts, roles, application-managed TLS, and Synology account integration are not first-release
   requirements. Synology account integration remains optional.
-- The UI supports review, corrections, approvals, manifest preview, and dry-run but has no real-rename endpoint. Real
-  execution remains in the CLI behind all existing safety gates.
+- The UI supports review, corrections, approvals, a readable batch-grouped before/after manifest preview, approval of
+  its exact digest, and dry-run. Raw JSON remains downloadable but is not the primary review view. The UI has no
+  real-rename endpoint; real execution remains in the CLI behind all existing safety gates.
 - Authentication, sessions, CSRF protection, HTTPS reverse-proxy guidance, and remote-access hardening are a later
   add-on rather than a blocker for the functional UI.
 
@@ -719,9 +765,10 @@ When this brief is accepted, update the existing documents as follows.
 - The first failed operation stops the complete execution run. The application never starts automatic rollback.
 - A durable audit distinguishes completed, failed, pending, and uncertain operations. Only confirmed successful
   operations enter an immutable JSON rollback manifest, in reverse execution order.
-- Each reverse entry links to the original operation and stores rollback source, rollback target, source fingerprint,
-  expected absent target, sequence, and reason. The manifest links to the original run and manifest digest and has
-  its own schema version and SHA-256 digest. It never contains shell commands.
+- Rollback reuses the normal manifest and entry schema with `manifest_kind: rollback`. Each reverse entry links to
+  the original operation and stores reverse paths and the current source fingerprint. List order defines execution
+  order, target absence is enforced by the executor, and the manifest has its own SHA-256 digest. It never contains
+  shell commands.
 - Rollback uses the normal executor and requires validation, dry-run, explicit confirmation, and audit logging. It
   never overwrites an existing path and never mutates its input manifest.
 - The operator chooses between executing rollback or preserving completed operations and creating a new workflow for
@@ -748,6 +795,52 @@ When this brief is accepted, update the existing documents as follows.
   are forbidden.
 - Writable mounting grants capability only; all manifest integrity, source fingerprint, target safety, successful
   dry-run, confirmation, stop-on-failure, rollback, and audit gates remain mandatory.
+
+### Persistence
+
+- The first release uses SQLite for mutable workflow state, human decisions, and audit metadata.
+- Versioned immutable rename and rollback manifests remain JSON artifacts with canonical serialization and digests.
+- Operators use CLI and UI workflows instead of editing SQLite, JSON, or YAML state directly.
+- Schema upgrades use versioned, recoverable migrations with backup guidance.
+
+## Future Wishlist
+
+These items are possible follow-up directions, not accepted first-release scope. Each needs a focused product decision,
+issue, naming examples, compatibility research, and tests before implementation. They do not block the operator-ready
+milestone.
+
+### Additional Media-Server Naming Profiles
+
+- The pluggable `NamingProfile` boundary is part of P0, while Jellyfin remains the only supported implementation in
+  the first release.
+- Consider a Plex profile with its own validated provider-tag rendering and movie, series, season, and episode naming
+  rules. Exact Plex syntax must be researched and tested when the work is accepted; this brief does not prescribe it.
+- Consider Emby as an alias of the Jellyfin profile only after compatibility tests prove that its required output is
+  identical; otherwise implement it as a separate profile.
+- Other media-server profiles may be added when they fit the core entity and manifest model without weakening safety.
+- Kodi workflows that require this application to read, generate, or manage `.nfo` files remain out of scope. The
+  non-negotiable `.nfo` rule applies to every profile.
+
+### Generalized Language And Localization Policy
+
+- Czech localization and the current `CZ` filename marker remain the first-release default.
+- A later policy may separate preferred metadata locale, display-title fallback order, audio-language markers, and
+  subtitle-language markers instead of treating them as one setting.
+- The design should use validated language tags and explicit filename mappings, preserve unknown source markers for
+  review, and avoid silently translating or rewriting display titles.
+- Future locale choices feed validated semantic fields into `OutputScheme`; they do not add localization branches to
+  parsers or individual naming profiles.
+
+### Constrained Naming Templates
+
+- Extend `OutputScheme` with named presets and bounded templates for movie files, series folders, season folders,
+  episodes, associated files, versions, and multipart components.
+- Expose only documented, typed tokens and validated conditionals. Do not allow arbitrary code execution or an
+  unrestricted general-purpose template engine.
+- Preview every rendered name and reject empty fields, invalid path components, collisions, ambiguous output, and
+  layouts that violate the selected profile.
+- Templates may change presentation but cannot bypass provider-ID cardinality, `.nfo` isolation, manifest approval,
+  source fingerprinting, dry-run, or executor safety rules.
 
 ## Resolved Product Decisions
 

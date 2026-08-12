@@ -5,6 +5,10 @@
 Normalize movie and TV series names for Jellyfin. Scans a media library, classifies files, validates parsed results,
 and looks up provider IDs from TMDb and TVDB.
 
+> **Current status:** This release is analysis-only. It scans, parses, validates, resolves basic provider matches, and
+> writes review reports. Rename planning, dry-run execution, real filesystem changes, persistent approvals, and the
+> interactive review UI are not implemented yet.
+
 For the full project design, naming conventions, and implementation phases,
 see [Project Description](docs/en/PROJECT-DESCRIPTION.md).
 
