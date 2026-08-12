@@ -4,7 +4,7 @@
 
 ## Účel dokumentu
 
-Tento dokument vymezuje ucelený směr produktu `jellyfin-media-normalizer` před implementací plánování a provádění
+Tento dokument vymezuje ucelený směr produktu `media-library-normalizer` před implementací plánování a provádění
 přejmenování a interaktivního uživatelského rozhraní.
 
 Slouží jako podklad pro pozdější sladění dokumentace. Po přijetí rozhodnutí v tomto dokumentu se mají příslušné
@@ -19,7 +19,7 @@ Toto zadání popisuje cílový produkt. Netvrdí, že všechny uvedené schopno
 
 ## Shrnutí produktu
 
-`jellyfin-media-normalizer` má být aplikace s účastí člověka pro analýzu, kontrolu, plánování a bezpečnou normalizaci
+`media-library-normalizer` má být aplikace s účastí člověka pro analýzu, kontrolu, plánování a bezpečnou normalizaci
 knihovny filmů a televizních seriálů pro Jellyfin.
 
 Aplikace má operátorovi pomoci převést nekonzistentní knihovnu na čistou a předvídatelnou strukturu bez ručních úprav

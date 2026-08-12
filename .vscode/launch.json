@@ -8,7 +8,7 @@
             "name": "report-scan",
             "type": "debugpy",
             "request": "launch",
-            "module": "jellyfin_media_normalizer.main",
+            "module": "media_library_normalizer.main",
             "python": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [

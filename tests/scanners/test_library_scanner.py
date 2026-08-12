@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.scanners.library_scanner import LibraryScanner
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.scanners.library_scanner import LibraryScanner
 
 
 class TestLibraryScannerInitialization:

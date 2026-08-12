@@ -1,5 +1,5 @@
 [project]
-name = "jellyfin-media-normalizer"
+name = "media-library-normalizer"
 version = "0.1.0"
 description = "Normalize movie and TV series names for Jellyfin, validate matches, and add provider IDs for reliable library identification."
 readme = "README.md"
@@ -37,12 +37,12 @@ dependencies = [
 ]
 
 [project.scripts]
-jellyfin-media-normalizer = "jellyfin_media_normalizer.main:main"
+media-library-normalizer = "media_library_normalizer.main:main"
 
 [project.urls]
-Homepage = "https://github.com/pokornyIt/jellyfin-media-normalizer"
-Repository = "https://github.com/pokornyIt/jellyfin-media-normalizer"
-Issues = "https://github.com/pokornyIt/jellyfin-media-normalizer/issues"
+Homepage = "https://github.com/pokornyIt/media-library-normalizer"
+Repository = "https://github.com/pokornyIt/media-library-normalizer"
+Issues = "https://github.com/pokornyIt/media-library-normalizer/issues"
 
 [dependency-groups]
 dev = [
@@ -59,7 +59,7 @@ requires = ["uv_build>=0.11.32,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "jellyfin_media_normalizer"
+module-name = "media_library_normalizer"
 
 [tool.uv]
 default-groups = ["dev"]

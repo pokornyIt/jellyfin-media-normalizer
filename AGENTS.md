@@ -1,6 +1,6 @@
 # Repository Instructions
 
-You are assisting with the `jellyfin-media-normalizer` project.
+You are assisting with the `media-library-normalizer` project.
 
 ## Scope And Sources Of Truth
 
@@ -213,7 +213,7 @@ Rules:
 - Raise specific exceptions in reusable and library code; do not call `sys.exit` there.
 - Exit the process only from `main()` or an equivalent top-level CLI layer.
 - Use logging for operational and diagnostic output. Use `click.echo` or `print` only for intentional CLI output.
-- Reuse `setup_logging`, `get_logger`, and `LoggingMixin` from `jellyfin_media_normalizer.utils.logging`; do not use
+- Reuse `setup_logging`, `get_logger`, and `LoggingMixin` from `media_library_normalizer.utils.logging`; do not use
   the root logger directly in library modules.
 - Keep severity semantics aligned with `ERROR`, `WARNING`, `INFO`, and `DEBUG`.
 - Keep log messages concise and actionable; avoid noisy logging in hot loops unless guarded by log level.

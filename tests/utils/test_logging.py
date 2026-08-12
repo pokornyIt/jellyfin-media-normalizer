@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from jellyfin_media_normalizer.utils.logging import (
+from media_library_normalizer.utils.logging import (
     HumanFormatter,
     JsonFormatter,
     LoggingMixin,

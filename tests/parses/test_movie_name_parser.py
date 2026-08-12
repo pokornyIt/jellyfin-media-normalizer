@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_type import MediaType
-from jellyfin_media_normalizer.models.parsed_name import ParsedName
-from jellyfin_media_normalizer.parsers.movie_name_parser import MovieNameParser
+from media_library_normalizer.models.media_type import MediaType
+from media_library_normalizer.models.parsed_name import ParsedName
+from media_library_normalizer.parsers.movie_name_parser import MovieNameParser
 
 
 class TestMovieNameParser:

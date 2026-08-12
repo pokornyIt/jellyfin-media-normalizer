@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.media_type import MediaType
-from jellyfin_media_normalizer.models.parsed_name import ParsedName
-from jellyfin_media_normalizer.models.scan_result import ScanResult
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.media_type import MediaType
+from media_library_normalizer.models.parsed_name import ParsedName
+from media_library_normalizer.models.scan_result import ScanResult
 
 
 def _make_media_item(

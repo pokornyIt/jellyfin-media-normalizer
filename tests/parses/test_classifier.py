@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_type import MediaType
-from jellyfin_media_normalizer.parsers.classifier import Classifier
+from media_library_normalizer.models.media_type import MediaType
+from media_library_normalizer.parsers.classifier import Classifier
 
 
 class TestClassifier:

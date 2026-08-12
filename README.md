@@ -1,4 +1,4 @@
-# jellyfin-media-normalizer
+# media-library-normalizer
 
 [English](README.md) | [Čeština](README.cs.md)
 
@@ -20,8 +20,8 @@ see [Project Description](docs/en/PROJECT-DESCRIPTION.md).
 ## Installation
 
 ```bash
-git clone https://github.com/pokornyIt/jellyfin-media-normalizer.git
-cd jellyfin-media-normalizer
+git clone https://github.com/pokornyIt/media-library-normalizer.git
+cd media-library-normalizer
 uv sync
 ```
 
@@ -29,11 +29,11 @@ uv sync
 
 ```bash
 # Scan only — no API keys needed
-uv run jellyfin-media-normalizer scan
+uv run media-library-normalizer scan
 
 # Full parse with provider lookup — requires API keys
 export $(cat .env | grep -v '^#' | xargs)
-uv run jellyfin-media-normalizer parse
+uv run media-library-normalizer parse
 ```
 
 The `parse` command:
@@ -54,22 +54,22 @@ All settings are read from environment variables. Create a `.env` file in the pr
 
 ```ini
 # Paths
-JMN_LIBRARY_PATH=./data/library
-JMN_WORKSPACE_PATH=./data/workspace
+MLN_LIBRARY_PATH=./data/library
+MLN_WORKSPACE_PATH=./data/workspace
 
 # Logging
-JMN_LOG_LEVEL=INFO
-JMN_LOG_FORMAT=text
+MLN_LOG_LEVEL=INFO
+MLN_LOG_FORMAT=text
 
 # Safety
-JMN_DRY_RUN=true
+MLN_DRY_RUN=true
 
 # Provider API keys
-JMN_TMDB_API_KEY=your-tmdb-api-key
-JMN_TVDB_API_KEY=your-tvdb-api-key
+MLN_TMDB_API_KEY=your-tmdb-api-key
+MLN_TVDB_API_KEY=your-tvdb-api-key
 
 # How often to log provider lookup progress (default: every 100 items)
-JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
+MLN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 ```
 
 ### Full environment variable reference
@@ -77,26 +77,26 @@ JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 <!-- markdownlint-disable MD013 -->
 | Variable                                | Default                     | Description                                         |
 | --------------------------------------- | --------------------------- | --------------------------------------------------- |
-| `JMN_APP_NAME`                          | `jellyfin-media-normalizer` | Application name used in logs                       |
-| `JMN_LIBRARY_PATH`                      | `./data/library`            | Root path of the media library to scan              |
-| `JMN_WORKSPACE_PATH`                    | `./data/workspace`          | Root path for generated files                       |
-| `JMN_CACHE_PATH`                        | `{workspace}/cache`         | Provider ID cache directory                         |
-| `JMN_REPORTS_PATH`                      | `{workspace}/reports`       | Report output directory                             |
-| `JMN_MANIFESTS_PATH`                    | `{workspace}/manifests`     | Rename manifest directory                           |
-| `JMN_LOGS_PATH`                         | `{workspace}/logs`          | Log file directory                                  |
-| `JMN_LOG_LEVEL`                         | `INFO`                      | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `JMN_LOG_FORMAT`                        | `text`                      | Log format (`text` or `json`)                       |
-| `JMN_DRY_RUN`                           | `true`                      | Disable destructive operations by default           |
-| `JMN_TMDB_API_KEY`                      | *(none)*                    | TMDb API key for online movie lookup                |
-| `JMN_TVDB_API_KEY`                      | *(none)*                    | TVDB API key for online TV series lookup            |
-| `JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Log progress every N items during provider lookup   |
+| `MLN_APP_NAME`                          | `media-library-normalizer`  | Application name used in logs                       |
+| `MLN_LIBRARY_PATH`                      | `./data/library`            | Root path of the media library to scan              |
+| `MLN_WORKSPACE_PATH`                    | `./data/workspace`          | Root path for generated files                       |
+| `MLN_CACHE_PATH`                        | `{workspace}/cache`         | Provider ID cache directory                         |
+| `MLN_REPORTS_PATH`                      | `{workspace}/reports`       | Report output directory                             |
+| `MLN_MANIFESTS_PATH`                    | `{workspace}/manifests`     | Rename manifest directory                           |
+| `MLN_LOGS_PATH`                         | `{workspace}/logs`          | Log file directory                                  |
+| `MLN_LOG_LEVEL`                         | `INFO`                      | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `MLN_LOG_FORMAT`                        | `text`                      | Log format (`text` or `json`)                       |
+| `MLN_DRY_RUN`                           | `true`                      | Disable destructive operations by default           |
+| `MLN_TMDB_API_KEY`                      | *(none)*                    | TMDb API key for online movie lookup                |
+| `MLN_TVDB_API_KEY`                      | *(none)*                    | TVDB API key for online TV series lookup            |
+| `MLN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Log progress every N items during provider lookup   |
 <!-- markdownlint-enable MD013 -->
 
 ### TMDb API Key
 
 1. Register at [themoviedb.org](https://www.themoviedb.org/) and create a free account.
 2. Go to **Settings → API** and copy your **API Key (v3 auth)**.
-3. Set `JMN_TMDB_API_KEY` to that value.
+3. Set `MLN_TMDB_API_KEY` to that value.
 
 ### TVDB API Key
 
@@ -105,16 +105,16 @@ TVDB API keys are **project-based**, not personal. You must register your applic
 1. Visit [thetvdb.com/api-information](https://www.thetvdb.com/api-information) and create an account.
 2. Click **Sign Up** to register a new project and fill in:
    - **Company / Project Revenue:** `Less than $50k per year`
-   - **Company or Project Name:** `jellyfin-media-normalizer`
+   - **Company or Project Name:** `media-library-normalizer`
    - **Description:**
 
      ```text
      Non-commercial open-source tool for normalizing and validating media library
      names for Jellyfin. Uses TVDB data for TV series metadata matching.
-     Project: https://github.com/pokornyIt/jellyfin-media-normalizer
+     Project: https://github.com/pokornyIt/media-library-normalizer
      ```
 
-3. Copy the **API Key** and set `JMN_TVDB_API_KEY` to that value.
+3. Copy the **API Key** and set `MLN_TVDB_API_KEY` to that value.
 
 TVDB's free tier requires attribution. Comply with their [licensing terms](https://www.thetvdb.com/api-information).
 
@@ -128,7 +128,7 @@ new items are left unresolved.
 Scans the media library and prints a summary.
 
 ```bash
-uv run jellyfin-media-normalizer scan
+uv run media-library-normalizer scan
 ```
 
 Output:
@@ -147,10 +147,10 @@ Scans, parses, validates, and performs provider ID lookup. This is the main anal
 
 ```bash
 export $(cat .env | grep -v '^#' | xargs)
-uv run jellyfin-media-normalizer parse
+uv run media-library-normalizer parse
 
 # or with custom report path
-uv run jellyfin-media-normalizer parse --output /path/to/custom-report.json
+uv run media-library-normalizer parse --output /path/to/custom-report.json
 ```
 
 Output:
@@ -179,8 +179,8 @@ Provider ID resolution order:
 Scans and parses, then writes a full JSON report of all parsed items.
 
 ```bash
-uv run jellyfin-media-normalizer report-scan
-uv run jellyfin-media-normalizer report-scan --output /custom/path/report.json
+uv run media-library-normalizer report-scan
+uv run media-library-normalizer report-scan --output /custom/path/report.json
 ```
 
 Default output: `data/workspace/reports/report-scan-results.json`
@@ -192,7 +192,7 @@ Default output: `data/workspace/reports/report-scan-results.json`
 Initializes an empty provider cache file. Use this to reset cached provider matches.
 
 ```bash
-uv run jellyfin-media-normalizer bootstrap-providers
+uv run media-library-normalizer bootstrap-providers
 ```
 
 Output:
@@ -208,7 +208,7 @@ Provider cache bootstrapped: data/workspace/cache/provider_ids.json
 Displays current runtime settings.
 
 ```bash
-uv run jellyfin-media-normalizer info
+uv run media-library-normalizer info
 ```
 
 ---
@@ -218,7 +218,7 @@ uv run jellyfin-media-normalizer info
 Checks whether a given path exists on the filesystem. Useful for diagnosing path configuration.
 
 ```bash
-uv run jellyfin-media-normalizer validate-path /path/to/check
+uv run media-library-normalizer validate-path /path/to/check
 ```
 
 ## Development
@@ -240,7 +240,7 @@ uv run jellyfin-media-normalizer validate-path /path/to/check
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=src/jellyfin_media_normalizer --cov-report=term-missing
+uv run pytest --cov=src/media_library_normalizer --cov-report=term-missing
 
 # Lint and format
 uv run ruff check src/ tests/

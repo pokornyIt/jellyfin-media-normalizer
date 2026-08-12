@@ -4,7 +4,7 @@
 
 ## Purpose Of This Document
 
-This document defines a coherent product direction for `jellyfin-media-normalizer` before rename planning,
+This document defines a coherent product direction for `media-library-normalizer` before rename planning,
 execution, and an interactive user interface are implemented.
 
 It is intended to be used as the input for a later documentation realignment. After the decisions in this
@@ -20,7 +20,7 @@ implemented.
 
 ## Product Summary
 
-`jellyfin-media-normalizer` should be a human-in-the-loop application for analyzing, reviewing, planning, and
+`media-library-normalizer` should be a human-in-the-loop application for analyzing, reviewing, planning, and
 safely normalizing a movie and TV library for Jellyfin.
 
 The application should help an operator move from an inconsistent library to a clean and predictable structure

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.media_item import MediaItem
 
 
 def _make_item(

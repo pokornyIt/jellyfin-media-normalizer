@@ -8,12 +8,12 @@ from typing import Any
 
 import pytest
 
-from jellyfin_media_normalizer.models.confidence_level import ConfidenceLevel
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.validation_result import ValidationResult
-from jellyfin_media_normalizer.models.validation_status import ValidationStatus
-from jellyfin_media_normalizer.reporters.review_reporter import ReviewReporter
+from media_library_normalizer.models.confidence_level import ConfidenceLevel
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.validation_result import ValidationResult
+from media_library_normalizer.models.validation_status import ValidationStatus
+from media_library_normalizer.reporters.review_reporter import ReviewReporter
 
 
 def _make_item(
