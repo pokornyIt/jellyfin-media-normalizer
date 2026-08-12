@@ -4,11 +4,12 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
-        "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
         "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-czech",
         "yzhang.markdown-all-in-one",
-        "bierner.markdown-mermaid",
-        "GitHub.copilot-chat"
+        "GitHub.copilot-chat",
+        "davidanson.vscode-markdownlint",
+        "ms-azuretools.vscode-containers"
     ]
 }

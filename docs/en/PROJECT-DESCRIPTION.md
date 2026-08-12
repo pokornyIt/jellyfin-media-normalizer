@@ -13,8 +13,8 @@ improve media identification, and prepare the library for controlled batch renam
 clutter on disk.
 
 This project does not use `.nfo` files. Jellyfin identification will instead rely on a single provider ID stored
-in the main folder name of a movie or TV series, using Jellyfin-supported identifier formats
-such as `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
+in the movie filename or TV series folder name, using Jellyfin-supported identifier formats such as
+`[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`.
 
 ## Scope
 
@@ -38,30 +38,110 @@ The project does not include:
 - automatic renaming without validation
 - full automation of uncertain matches
 
-## Naming Conventions
+## Library Layout And Classification
+
+The application scans one configured library root that may contain movies and TV series. The library root is a
+neutral container and is not classified as either media type. A movie file or TV series folder directly in the
+library root remains processable and may become ready for planning, but receives a non-blocking warning because
+the mixed root is not a suitable final Jellyfin library layout.
+
+Directories below the root are classified by their contents as movie collections, series collections, TV series,
+seasons, or incompatible directories. A classified movie collection must not contain a TV series subtree, and a
+classified series collection must not contain movie files. Folder names may contribute evidence, but content and
+structure determine the classification.
+
+Scanning descends through at most five directory levels below the configured root. The root has depth zero and a
+file does not add a directory level. Content beyond this limit is reported as incompatible instead of being
+silently omitted.
+
+The normalized TV layout is strict:
+
+```text
+Series Name [provider-id]/
+└── Season 01/
+    └── Episode Title S01E01 - CZ.ext
+```
+
+A series folder contains only normalized season folders, and a season folder contains episode files and their
+supported associated files without another directory level. Direct episode files in an input series folder are
+repairable: an explicit `SxxExx` selects that season, while an episode number without a season proposes
+`Season 01` and requires review. Ambiguous episode numbering requires review without an automatic plan. Nested
+season directories and mixed movie/series content are incompatible and receive corrective guidance.
+
+An item that can be grouped safely but has uncertain metadata enters review. An item whose ownership or structural
+role cannot be determined is incompatible and cannot enter provider selection, approval, or a rename manifest.
+`.nfo` files are always ignored and never enter the domain model or a standalone filesystem operation. They may move
+only as children of a renamed parent directory.
+
+## Naming Profile And Output Scheme Boundary
+
+Parsers and entity analysis produce media-server-neutral title, year, language, provider, episode, version, and
+component fields. They never assemble target filenames or directory names. The planner uses two pluggable contracts:
+
+- `NamingProfile` defines and validates media-server compatibility rules, including provider tags, directory
+  structure, episode notation, required fields, and compatible output schemes;
+- `OutputScheme` renders validated semantic fields into path components, controlling title language, language
+  markers, optional presentation fields, and token order.
+
+The first release implements `JellyfinNamingProfile` and one fixed `JellyfinDefaultOutputScheme`, selected through
+explicit registries or dependency injection. It does not implement configurable templates or a dynamic third-party
+plugin system. Every manifest records identifiers and versions for both components. Future Plex or Emby profiles and
+output schemes may change compatibility or presentation without changing parsing, provider selection, manifest
+safety, or execution. An Emby alias may reuse Jellyfin only after compatibility tests prove identical requirements.
+
+All naming profiles and output schemes remain subject to shared path, collision, provider-ID, `.nfo`, approval,
+fingerprint, dry-run, and execution rules.
+
+## Jellyfin Naming Conventions
 
 ### Movies
 
 Movie filenames use the following format:
 
-- `Czech Title (Year) - CZ.ext`
-- `Czech Title (Year) - EN (tit. CZ).ext`
+- `Czech Title (Year) [imdbid-tt1234567] - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - EN (tit. CZ).ext`
 
-The movie folder name contains a single provider ID:
+A movie is a video file and does not require or create a dedicated movie folder. Organizational folders for genres
+and collections remain readable and do not receive provider IDs. A supported associated file uses the same filename
+stem as its owning video and is renamed with it.
 
-- `Czech Title (Year) [imdbid-tt1234567]`
-- `Czech Title (Year) [tmdbid-12345]`
+An official `Part 1` or `Part 2` in the movie title remains part of the display title when the releases have distinct
+provider identities. One movie physically split across multiple files instead uses a terminal component marker:
 
-Only one ID will be stored, based on the selected provider recommendation.
+- `Czech Title (Year) [tmdbid-12345] - CD1 - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - CD2 - CZ.ext`
+
+Component numbering must start at one and remain contiguous. A `Part` marker alone never proves that files belong to
+one movie; provider identity or explicit operator confirmation must distinguish components from separate releases.
+
+Alternate versions remain separate files under one movie entity and one selected provider ID. Their controlled
+edition label precedes the language marker, for example:
+
+- `Czech Title (Year) [tmdbid-12345] - Director's Cut - CZ.ext`
+- `Czech Title (Year) [tmdbid-12345] - Theatrical - EN (tit. CZ).ext`
+
+Multiple files with the same title, year, and provider require review before they can be classified as components,
+alternate versions, duplicates, or distinct movies.
 
 ### TV Series
 
-The TV series root folder name uses the following format:
+The TV series folder name uses the following format:
 
 - `Series Name [tvdbid-12345]`
 - `Series Name [tmdbid-12345]`
 
-No year will be used in the TV series folder name, because it may be misleading or confusing.
+The normalized TV series folder never includes a release or first-air year. A terminal year in an input folder is
+used for lookup and review, then removed only after the provider identity is selected and approved. The provider ID
+distinguishes remakes with the same display title.
+
+Numbers that are part of the actual title, such as `1899`, `1923`, `11.22.63`, or `Catch-22`, remain unchanged. An
+ambiguous number requires review. Years are never added to season folders or episode filenames.
+
+Season folder names use `Season XX`, for example `Season 01`.
+
+TV specials use `Season 00` and `S00E##`. They belong to the series and never receive a provider ID. A single file
+containing multiple episodes uses an explicit range such as `S01E01-E02`. Multi-part stories stored as separately
+numbered episodes remain separate episodes; `Part 1` and `Part 2` remain part of their display titles.
 
 Episode filenames do not contain any provider ID:
 
@@ -70,23 +150,80 @@ Episode filenames do not contain any provider ID:
 
 Language markers use standard two-letter codes: `CZ`, `EN`, `DE`, `SK`, `FR`, `IT`, `ES`.
 
+### Display Titles
+
+The display title is selected in this order: an operator-approved title, the selected provider's Czech localized
+title, the existing filesystem title, and the provider's original title. The last fallback requires review.
+
+Display titles preserve diacritics, articles, punctuation, and word order from their selected source. Lookup
+normalization never rewrites display text. A manually approved title persists across later scans, while changing the
+selected provider reopens title review.
+
+### Associated Files
+
+The first release supports subtitle files with `.srt`, `.ass`, `.ssa`, `.vtt`, and `.sub` extensions. A subtitle
+belongs to a video when it uses the same filename stem or adds only recognized language and subtitle qualifiers,
+such as `cs`, `en`, `forced`, `sdh`, `cc`, or `default`. Qualifiers are preserved during renaming. Orphaned subtitles
+and target-name collisions require review.
+
+Other file types are ignored as individual items and remain inside a directory when that parent directory is
+renamed. An `.nfo` file is never read, parsed, modeled, created, modified, deleted, or targeted by a standalone
+manifest operation. It may move only as ignored content of a renamed parent directory.
+
+A video recognized as a bonus or extra requires review. The operator may classify it as a movie, TV special, or
+ignored content. Ignored extras receive no provider ID or standalone manifest operation and may move only as content
+of a renamed parent directory.
+
 ## Metadata Strategy
 
 The project avoids local metadata sidecar files such as `.nfo` in order to keep the filesystem readable
 and uncluttered when browsing the storage directly.
 
-Instead, Jellyfin identification will be improved by adding a single provider ID only to the main movie
-or series folder name.
+Instead, Jellyfin identification will be improved by adding a single provider ID to the movie filename or TV series
+folder name.
 
 Provider priority:
 
-- Movies: primary lookup through TMDb, with one final selected ID stored in the folder name
+- Movies: primary lookup through TMDb, with one final selected ID stored in the video filename
 - TV Series: online lookup order is TMDb TV first, then TVDB; one final selected ID is stored in the series folder name
 - Episodes: no provider ID lookup; no ID stored in the filename
 
+### Provider Selection Policy
+
+Provider candidates are scored independently of parser and entity-group confidence. Automatic selection is allowed
+only for a structurally valid, high-confidence entity with a matching media type, a provider-valid ID, and no
+conflict with an embedded or manually approved selection. A valid embedded ID and an explicit manual selection take
+precedence over candidate scoring.
+
+With a reliable source year, the candidate score uses 80% normalized title similarity and 20% year agreement. An
+exact year scores `1.0`, a one-year difference scores `0.5`, and a larger difference or missing candidate year scores
+`0.0`. Movies require an exact year for automatic selection. TV series require an exact input year when one was
+reliably parsed; without one, their normal score equals title similarity.
+
+Automatic selection requires score `0.92`, title similarity `0.90`, and a `0.08` lead over the second candidate from
+the same provider. A sole candidate requires score and title similarity `0.97`. API ordering, popularity, artwork,
+overview availability, and metadata completeness do not contribute to identity scoring.
+
+A yearless TV series that does not pass title-only scoring enters review in the first release. A later matching
+optimization may use provider episode titles as additional evidence. Up to three suitable episodes are then sampled
+deterministically as the first, middle, and last usable episode, preferably across different seasons. At least two
+samples with usable episode titles are required. Specials, `Season 00`, multipart or multi-episode files, and
+unparseable episodes are excluded.
+
+Every sampled season and episode coordinate must exist for the candidate, and every sampled title must have at least
+`0.85` similarity to a localized or original provider episode title. The corroborated score uses 75% series-title
+similarity and 25% average episode-title similarity. It requires series-title similarity `0.85`, final score `0.92`,
+the normal `0.08` lead, and no sampled conflict. Episode lookup provides series-level identity evidence only and
+never creates an episode provider ID.
+
+Automatic provider selection produces `ready_for_approval`, not rename approval. Manual overrides are explicit and
+auditable. The thresholds are named, versioned policy constants that operators cannot lower in the first release.
+Cached selections are automatically reusable only when previously approved under the same policy version with
+unchanged identity inputs; other cached results require rescoring or review.
+
 ## Design Principles
 
-- No `.nfo` files
+- No standalone `.nfo` processing or manifest operations
 - One provider ID per movie or TV series; no episode-level IDs
 - No rename without a validated plan
 - No bulk rename without a generated manifest
@@ -94,6 +231,100 @@ Provider priority:
 - Side effects are isolated to the executor layer
 - Ambiguous or low-confidence items are always routed to review, never automated
 - Readable filesystem structure is the priority
+- Symbolic links are unsupported and incompatible everywhere in the workflow. They are never followed, modeled,
+  planned, or renamed, and review cannot override their rejection
+
+## Source-State Safety
+
+Every regular source file in a rename manifest has a required fingerprint containing its relative path, entry type,
+size, and modification time at the precision reported by the filesystem. The first release does not hash complete
+media content and does not use inode number, creation time, ownership, or permissions as identity fields.
+
+A renamed directory uses a SHA-256 tree digest over a canonically sorted inventory. Every descendant contributes its
+relative path and entry type; managed regular files also contribute size and modification time. Ignored children,
+including `.nfo`, contribute only opaque membership and are never opened, parsed, modeled, or assigned a standalone
+manifest entry. A symbolic link is always unsupported and incompatible, is never followed, and blocks its containing
+directory from planning and execution. It cannot be accepted through review.
+
+The manifest has a separate SHA-256 digest over its canonical serialization. Dry-run is valid only for the exact
+manifest digest and matching source fingerprints. Source state is revalidated during dry-run, immediately before
+each batch, and before every operation. Any mismatch stops the complete execution run and requires a new scan,
+analysis, approval, manifest, and dry-run. Target existence and collision checks are independent and repeat at
+planning, dry-run, and execution boundaries.
+
+## Partial Failure And Rollback
+
+The first failed rename stops the complete execution run. The application does not attempt automatic rollback.
+Instead, its durable audit identifies confirmed successful, failed, pending, and uncertain operations. Only confirmed
+successful operations are reversed, in reverse execution order, into an immutable JSON rollback manifest.
+
+Rollback reuses the normal `RenameManifest` and `RenameEntry` schema with `manifest_kind` set to `rollback`. Each
+entry links to the original operation and contains the reverse paths and current source fingerprint. List order
+defines execution order, while target absence remains an executor invariant. The manifest links to the original run
+and manifest digest and has its own SHA-256 digest. It stores structured data rather than shell commands.
+
+The normal manifest executor handles rollback. Source state and target absence are validated again, dry-run is
+mandatory, real rollback requires explicit confirmation, and every result is written to a separate audit. Rollback
+never overwrites an existing path or mutates its manifest. The operator may instead preserve completed operations and
+create a new workflow for the remaining items.
+
+## Initial Web UI Deployment
+
+The first web UI is an unauthenticated single-operator application for a trusted machine or private LAN. The bind
+address is configurable and defaults to `0.0.0.0` so a Windows browser can reach an application running in WSL or a
+container. Listening outside loopback emits a warning but does not prevent startup. Host firewall rules and Compose
+port publishing define which trusted devices can connect.
+
+The initial UI supports setup, analysis, review, correction, approval, audit history, and dry-run. Its manifest view
+is a human-readable before/after diff grouped into logical batches, including associated files, provider identity,
+warnings, validation failures, and the exact digest being approved. Raw JSON remains downloadable as executor input
+but is not the primary review view. The UI has no endpoint for real rename execution. Actual filesystem changes
+remain CLI-only and still require a validated manifest, successful dry-run, and separate explicit confirmation.
+State-changing UI routes never use `GET`.
+
+Public Internet and untrusted-network exposure are unsupported. Authentication, accounts, roles, sessions, CSRF
+protection, application-managed TLS, HTTPS reverse-proxy guidance, and remote-access hardening are later add-ons.
+Synology account integration is optional and is not required for the first supported deployment.
+
+## Container Architecture Support
+
+The project officially builds, smoke-tests, and publishes only `linux/amd64` container images. This platform covers
+the `x86_64` WSL development environment and both target NAS devices: Synology DS925+ with AMD Ryzen V1500B and
+Synology DS723+ with AMD Ryzen R1600.
+
+The first release does not publish ARM, 32-bit, or multi-platform images. Compose does not set `platform`, so an
+unsupported host fails with Docker's normal incompatible-image error instead of silently using AMD64 emulation.
+
+The Dockerfile remains portable where practical. Advanced documentation will include native `docker build` and
+optional single-platform `docker buildx build` examples for users who want to try another architecture. Such builds
+are best-effort, receive no project release testing, and are not officially supported or published.
+
+## Compose Write Access
+
+Normal `docker compose up` starts only the long-running `app` service. It mounts the media library explicitly at
+`/media:ro` and uses a persistent writable `/workspace`. The web service never receives writable media access.
+
+Real rename and rollback execution use a separate one-shot `executor` service in the `execution` profile. It mounts
+`/media:rw`, has no network or web port, uses `restart: "no"`, and is removed after the command completes. The
+documented invocation has the following form:
+
+```bash
+docker compose --profile execution run --rm executor <command> <explicit-execution-flag>
+```
+
+Compose records `:ro` and `:rw` literally; an environment variable never switches the media mount mode. Before any
+mutation, the executor acquires a global execution lock in the workspace. The writable mount and lock do not bypass
+manifest integrity, source fingerprint, target safety, successful dry-run, explicit confirmation, stop-on-failure,
+rollback, or audit requirements.
+
+## Persistence
+
+The first release uses SQLite for mutable workflow state, including runs, grouped media entities, provider
+candidates, corrections, approvals, notes, state transitions, and audit metadata. Versioned immutable rename and
+rollback manifests remain JSON artifacts. Operators are not expected to edit either storage format directly.
+
+Schema changes use versioned, recoverable migrations. Container upgrades preserve the workspace database and
+artifacts and provide backup guidance before a potentially incompatible migration.
 
 ## Implementation
 
@@ -155,8 +386,9 @@ src/jellyfin_media_normalizer/
 
 Provider IDs are resolved in this priority order:
 
-1. **Embedded ID** — if the folder name already contains `[imdbid-tt...]`, `[tmdbid-...]`, or `[tvdbid-...]`,
-   that ID is used directly and no lookup is performed.
+1. **Embedded ID** — if a movie filename or TV series folder name already contains exactly one syntactically valid
+   provider ID compatible with that media type, that ID is selected and no cache or online lookup is performed.
+   Provider IDs elsewhere, multiple IDs, and episode-level IDs do not resolve an entity and require validation.
 2. **Cache** — the local JSON cache at `data/workspace/cache/provider_ids.json` is checked first for
    a matching lookup key.
 3. **Online API** — if the cache has no match and API keys are configured, clients are queried in this order:
@@ -165,42 +397,47 @@ Provider IDs are resolved in this priority order:
 
 Items classified as `unknown` are skipped entirely.
 
-### Implementation Phases
+### Current Implementation Snapshot
 
-| #   | Phase                                 | Status         |
-| --- | ------------------------------------- | -------------- |
-| 1   | Inventory and scan                    | ✅ Implemented |
-| 2   | Classification                        | ✅ Implemented |
-| 3   | Name normalization                    | ✅ Implemented |
-| 4   | Validation                            | ✅ Implemented |
-| 5   | Provider ID lookup                    | ✅ Implemented |
-| 6   | Rename planning (manifest generation) | ⏳ Planned     |
-| 7   | Batch rename execution                | ⏳ Planned     |
-| 8   | Review workflow (HTML/CSV reports)    | ⏳ Planned     |
+<!-- markdownlint-disable MD013 -->
+| #   | Capability                         | Status                                                |
+| --- | ---------------------------------- | ----------------------------------------------------- |
+| 1   | Inventory and scan                 | Partial: supported video files only                   |
+| 2   | Classification and entity grouping | Partial: flat file classification only                |
+| 3   | Name normalization                 | Partial: basic filename parsing only                  |
+| 4   | Validation                         | Partial: per-file checks; grouped consistency missing |
+| 5   | Provider ID lookup and selection   | Partial: basic resolver chain and first-result match  |
+| 6   | Rename planning                    | Not started                                           |
+| 7   | Batch rename execution             | Not started                                           |
+| 8   | Static review exports              | Partial: JSON and HTML implemented; CSV missing       |
+| 9   | Interactive review and approval UI | Not started                                           |
+<!-- markdownlint-enable MD013 -->
 
 #### Phase 1 — Inventory and Scan
 
-Scans the media library and collects file paths, folder structure, and filename patterns.
-Detects supported video extensions. Produces a flat list of `MediaItem` objects used as input for all following phases.
+The current scanner detects supported video extensions and produces a flat list of `MediaItem` objects. Complete
+directory, subtitle, ignored-file, depth-limit, and symbolic-link inventory is still required for safe grouping and
+planning.
 
 #### Phase 2 — Classification
 
-Each item is classified into one of: `movie`, `tv_episode`, or `unknown`.
+The current implementation classifies each flat video item as `movie`, `tv_episode`, or `unknown`.
 
 Classification is based on filename patterns: a year in parentheses indicates a movie; an `SxxExx` marker
-(or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`.
+(or equivalent) indicates a TV episode. Items that match neither are marked as `unknown`. Directory-role
+classification and grouping files into movie, TV series, episode, and associated-file entities are not implemented.
 
 #### Phase 3 — Name Normalization
 
-Normalized names are parsed into structured `ParsedName` objects containing title, year, season/episode, language code,
-and subtitle flags. Release tags (codec names, resolutions, quality markers) are stripped before parsing.
+Basic normalized names are parsed into `ParsedName` objects containing title, year, season or episode coordinates,
+language code, and subtitle flags. Release tags are stripped before parsing. The accepted multipart, version,
+associated-file, display-title, and strict TV-layout rules are not yet implemented completely.
 
 #### Phase 4 — Validation
 
-All parsed items are validated for structural completeness and internal consistency.
-Each item receives a `ValidationStatus` (`passed`, `review_needed`, or `failed`)
-and a `ConfidenceLevel` (`high`, `medium`, or `low`). High-confidence items proceed automatically;
-others are flagged for review.
+Parsed items receive per-file structural validation, a `ValidationStatus` (`passed`, `review_needed`, or `failed`),
+and a `ConfidenceLevel` (`high`, `medium`, or `low`). A consistency validator exists, but grouped consistency is not
+integrated into the production workflow. No item is considered approved merely because per-file validation passes.
 
 #### Phase 5 — Provider ID Lookup
 
@@ -209,6 +446,11 @@ in the [Provider ID Resolution](#provider-id-resolution) section above.
 
 The result for each resolved item is a `ProviderMatch` object containing: `provider`, `provider_id`, `confidence`,
 `reason`, and `lookup_key`. Items without a match are written to the unresolved report.
+
+The current online resolver accepts the first returned result with fixed confidence. Multiple candidates,
+explainable scoring, ambiguity thresholds, policy-versioned cache reuse, and persisted selection provenance remain
+to be implemented before this phase satisfies the product policy. Episode-title corroboration is a later
+optimization rather than a first-release requirement.
 
 #### Phase 6 — Rename Planning *(planned)*
 
@@ -220,12 +462,19 @@ Dry-run mode will be the default. Actual execution requires an explicit opt-in f
 #### Phase 7 — Batch Rename Execution *(planned)*
 
 Renames will be executed in logical batches (movies by folder, TV series one show at a time) only after the manifest
-has been reviewed. The executor will support execution logging, collision detection, and rollback capability.
+has been reviewed. The executor will support audit logging, collision detection, immediate stop on failure, and
+explicit rollback through an immutable reverse manifest. Automatic rollback is not supported.
 
-#### Phase 8 — Review Workflow *(planned)*
+#### Phase 8 — Static Review Exports *(partial)*
 
-Items flagged for review will be exported in additional formats (HTML, CSV) to allow manual inspection outside of JSON.
-This phase has no side effects on the filesystem.
+JSON and HTML review and unresolved reports exist. CSV export remains planned. Report generation has no side effects
+on the media library.
+
+#### Phase 9 — Interactive Review And Approval UI *(planned)*
+
+A minimum web UI will provide persistent, filterable, paginated review queues, corrections, provider selection,
+approvals, rejections, deferral, notes, and safe bulk actions. It may expose planning and dry-run results but has no
+endpoint for real filesystem execution in the first release.
 
 ## Expected Outcome
 
@@ -235,5 +484,5 @@ After completion, the media library should have:
 - improved Jellyfin recognition through embedded provider IDs
 - a repeatable workflow for future library additions
 - a safe batch rename process with rollback capability
-- minimal filesystem clutter — no sidecar files, no embedded metadata
+- minimal filesystem clutter — no generated metadata sidecars and no embedded metadata changes
 - controlled handling of all uncertain or ambiguous cases

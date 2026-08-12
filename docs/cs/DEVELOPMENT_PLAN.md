@@ -2,343 +2,339 @@
 
 [English](../en/DEVELOPMENT_PLAN.md) | [Čeština](DEVELOPMENT_PLAN.md)
 
-Tento dokument sleduje stav implementace a další kroky projektu `jellyfin-media-normalizer`.
+Tento dokument sleduje ověřený stav implementace a praktický backlog projektu jellyfin-media-normalizer. Produktová
+pravidla určuje [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md), přijatý směr a zdůvodnění popisuje
+[PRODUCT_DEVELOPMENT_BRIEF.md](PRODUCT_DEVELOPMENT_BRIEF.md).
 
-Má se průběžně aktualizovat a sloužit jako praktický kontrolní seznam pro realizaci následujících fází.
+## Přehled aktuálního stavu (2026-07-19)
 
-## Snímek aktuálního stavu (2026-07-19)
+Ověřené současné schopnosti:
 
-Ověřeno jako implementované a stabilní:
+- skenování podporovaných video souborů;
+- ploché parsování a klasifikace jednotlivých souborů na film, epizodu seriálu nebo neznámou položku;
+- ověření struktury jednotlivého souboru a skórování jistoty;
+- základní řetězec vloženého ID, JSON mezipaměti a online resolveru poskytovatele;
+- kontrolní sestavy a sestavy nevyřešených položek ve formátech JSON a HTML;
+- nastavené kontroly kvality Ruff, Pyright, pytest a pre-commit.
 
-- proces skenování a inventarizace souborového systému;
-- proces parsování a klasifikace filmů, televizních epizod a neznámých položek;
-- proces ověřování struktury, konzistence a míry jistoty;
-- vyhledání poskytovatele v pořadí vložené ID -> mezipaměť -> řetězec online resolverů;
-- sestavy: kontrolní JSON, JSON nevyřešených položek, kontrolní HTML a HTML nevyřešených položek;
-- bezpečné výchozí běhové nastavení včetně dry-run;
-- místní kontroly kvality: Ruff, Pyright, pytest a pre-commit hooky.
-
-Ověřený stav kvality:
+Poslední zaznamenané ověření:
 
 - `uv run pytest -q`: 466 testů prošlo;
 - `uv run ruff check src tests`: prošlo;
 - `uv run pyright`: 0 chyb.
 
-Hlavní chybějící schopnost produktu:
+Tyto datované výsledky dokládají uvedený snapshot, nikoli dokončení cílového produktového workflow.
 
-- Plánování a provádění přejmenování dosud nejsou implementovány jako plnohodnotné vrstvy.
+<!-- markdownlint-disable MD013 -->
+| Schopnost                              | Stav                                                   |
+| -------------------------------------- | ------------------------------------------------------ |
+| Inventarizace a skenování              | Částečně: pouze podporované video soubory              |
+| Klasifikace a seskupování entit        | Částečně: pouze plochá klasifikace souborů             |
+| Normalizace názvů                      | Částečně: pouze základní parsování názvů souborů       |
+| Ověření                                | Částečně: chybí skupinová konzistence                  |
+| Vyhledání a výběr poskytovatele        | Částečně: řetězec přijímá první výsledek               |
+| Plánování přejmenování                 | Nezahájeno                                             |
+| Dávkové přejmenování a rollback        | Nezahájeno                                             |
+| Statické kontrolní exporty             | Částečně: JSON a HTML hotové; CSV chybí                |
+| Interaktivní kontrolní UI              | Nezahájeno                                             |
+<!-- markdownlint-enable MD013 -->
 
-Další riziko rozsahu a použitelnosti:
+Současné vydání slouží pouze k analýze. Výchozí nastavení dry-run existuje, ale planner ani executor přejmenování
+zatím neexistují, takže je nelze prezentovat jako implementovanou bezpečnost přejmenování.
 
-- Samotné CLI a ruční úpravy souborů nebudou dobře škálovat pro velké dávky se stovkami až tisíci souborů.
+## Nezměnitelná omezení
 
-## Neměnná omezení
+- Nikdy samostatně nečíst, neparsovat, nevytvářet, neměnit, nemazat ani necílit soubory `.nfo`. Soubor `.nfo` se může
+  přesunout pouze jako ignorovaný potomek přejmenované nadřazené složky.
+- Ukládat nejvýše jedno vybrané ID poskytovatele pro film nebo seriál a nikdy ID na úrovni epizody.
+- Každý symbolický odkaz považovat za nepodporovaný a nekompatibilní. Nikdy jej nenásledovat, nemodelovat, neplánovat
+  ani nepřejmenovávat a nepovolit obejití odmítnutí lidskou kontrolou.
+- Každé přejmenování musí vycházet ze schváleného, ověřeného a uloženého manifestu.
+- Dry-run zůstává výchozí; skutečné provedení vyžaduje explicitní volbu.
 
-Všechny vývojové úkoly musí zachovat tato pravidla:
+## Architektura vydání
 
-- Nikdy nezpracovávat ani nevytvářet soubory `.nfo`.
-- Právě jedno ID poskytovatele pro entitu filmu nebo televizního seriálu.
-- Nikdy nepřejmenovávat bez ověřeného plánu.
-- Nikdy neprovádět dávkové přejmenování bez vytvořeného manifestu.
-- Dry-run musí zůstat výchozím režimem spuštění.
+- CLI zůstává zdrojem pravdy pro automatizaci a skutečné provedení.
+- Odlehčená aplikace FastAPI se serverově vykresleným HTML poskytne hromadnou kontrolu a schvalování.
+- UI a CLI používají stejné aplikační služby, přechody stavů a hranice planneru a executoru.
+- První UI je bez autentizace, má výchozí adresu `0.0.0.0` a je podporované jen na důvěryhodném počítači nebo privátní
+  LAN. Může spouštět plánování a dry-run, ale nemá endpoint pro skutečné provedení.
+- SQLite ukládá měnitelný stav workflow. Neměnné manifesty přejmenování a rollbacku zůstávají artefakty JSON.
+- Parsery a služby entit zůstávají nezávislé na mediálním serveru. `NamingProfile` validuje kompatibilitu s mediálním
+  serverem; `OutputScheme` vykresluje cílové názvy. P0 dodá explicitní implementace Jellyfin s jedním pevným výstupním
+  schématem bez dynamického vyhledávání pluginů třetích stran nebo konfigurovatelných šablon.
+- Docker Compose je primární cesta operátora. Dlouhodobá aplikace používá `/media:ro`; samostatný jednorázový executor
+  v profilu `execution` používá `/media:rw`, nemá síť ani webový port a získává globální execution lock workspace.
+- Oficiální obrazy cílí pouze na `linux/amd64` pro WSL, Synology DS925+ a Synology DS723+.
 
-## Stav fází
+## P0 - Vydání připravené pro operátora
 
-| Fáze | Oblast                                | Stav                         |
-| ---- | ------------------------------------- | ---------------------------- |
-| 1    | Inventarizace a skenování             | Hotovo                       |
-| 2    | Klasifikace                           | Hotovo                       |
-| 3    | Normalizace názvů                     | Hotovo                       |
-| 4    | Ověření                               | Hotovo                       |
-| 5    | Vyhledání ID poskytovatele            | Hotovo                       |
-| 6    | Plánování přejmenování (manifest)     | Nezahájeno                   |
-| 7    | Dávkové provedení přejmenování        | Nezahájeno                   |
-| 8    | Exporty kontrolního workflow          | Částečně (HTML ano, CSV ne)  |
-
-## Směr UX a produktu pro velké knihovny
-
-Rozhodnutí k implementaci:
-
-- Zachovat CLI jako zdroj pravdy pro automatizaci a dávkové operace.
-- Přidat lehkou webovou aplikační vrstvu (FastAPI a HTML vykreslované na serveru) pro hromadnou kontrolu a schvalování.
-
-Odůvodnění:
-
-- Současný přístup je provozně robustní, ale neefektivní při třídění tisíců nejednoznačných položek.
-- Webové UI může nabídnout filtrování, hromadné schválení či zamítnutí a bezpečnější workflow s účastí člověka.
-
-Architektonická omezení UI:
-
-- UI nesmí obcházet bezpečnostní brány planneru a executoru.
-- Akce UI musí zapisovat do manifestu nebo stavu kontroly a následně spouštět stejný ověřený proces jako CLI.
-- Dry-run zůstává výchozí pro všechny exekuční akce spuštěné z UI.
-- UI musí dodržet pravidlo jediného ID poskytovatele na film či seriál a zákaz souborů `.nfo`.
-
-## Fronta implementace
-
-## P0 – Kritická cesta blokující vydání
-
-### 1. Přidat modely přejmenování
+### P0.1 Opravit analytický model a ukládat stav workflow
 
 Cíl:
 
-- Zavést sdílené datové kontrakty pro plánování a provádění.
+- Před výběrem poskytovatele nebo plánováním vytvořit důvěryhodné entity a trvalý stav lidských rozhodnutí.
 
 Výstupy:
 
-- model `RenameEntry`;
-- model `RenameManifest`;
-- stabilní pole schématu: zdrojová cesta, cílová cesta, důvod, jistota, vazba na poskytovatele a metadata dávky.
+- Inventarizovat složky, podporovaná videa a titulky, ignorované členství, překročení hloubky a symbolické odkazy bez
+  otevírání ignorovaných souborů.
+- Přidat typované entity filmu, seriálu, epizody a souvisejícího souboru a klasifikaci rolí složek.
+- Udržet parsovaná a seskupená pole entit nezávislá na formátu cílových názvů Jellyfin.
+- Seskupit soubory do entit a zapojit ověření skupinové konzistence do produkčního workflow.
+- Vynutit přijatá pravidla smíšeného kořene, striktního seriálového layoutu, vícedílných médií, verzí, titulků a
+  nekompatibilních složek.
+- Přidat SQLite pro běhy, entity, kandidáty, opravy, schválení, poznámky, přechody workflow a metadata auditu s
+  verzovanými migracemi.
+- S implementací schématu a hranic migrací zaznamenat zaměřené ADR perzistence.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Modely jsou plně typované a ověřované.
-- Modely používají plannery, executory i výstupní sestavy a souhrny.
+- Každá nalezená cesta je spravovaná, ignorovaná s neprůhledným členstvím nebo nahlášená jako nekompatibilní.
+- Neúspěšné, nejednoznačné, nekompatibilní entity a entity s nízkou jistotou nelze implicitně schválit.
+- Stav přežije restart a operátor nemusí přímo editovat generovaná data JSON, YAML ani SQLite.
+- Testy pokrývají seskupování, smíšený obsah, maximální hloubku, upozornění v rootu, titulky a symbolické odkazy.
 
-### 2. Implementovat vrstvu plannerů
+### P0.2 Implementovat základní kontrolovatelný výběr poskytovatele
 
 Cíl:
 
-- Vytvořit balíček plannerů pro generování ověřených manifestů přejmenování.
+- Nahradit první výsledek přijatou deterministickou politikou prvního vydání.
 
 Výstupy:
 
-- modul plannerů se službou pro sestavení manifestu;
-- serializace schématu manifestu do `data/workspace/manifests`;
-- ověřovací brána před označením manifestu za spustitelný.
+- Více kandidátů poskytovatele s původem a vysvětlením skóre.
+- Verzované konstanty pro skóre, podobnost názvu, náskok, jediného kandidáta a brány roku.
+- Přesný rok filmu, spolehlivý vstupní rok seriálu, priorita vloženého a ručního výběru a fallback TMDb/TVDB.
+- Opětovné použití mezipaměti podle politiky a uložený stav `ready_for_approval` bez implicitního schválení.
+- Seriály bez roku, které neprojdou samotným názvem, zůstávají ke kontrole; potvrzení epizodami není součástí P0.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Planner přijímá parsované a ověřené položky médií.
-- Výstup planneru je deterministický a plně serializovatelný.
-- Planner odmítá neplatné, nejednoznačné a nevyřešené položky.
+- Pořadí API, popularita, grafika ani úplnost metadat nikdy nerozhodují identitu.
+- Projdou testy hranic, konfliktů roku, blízkých a jediných kandidátů, fallbacku a původu mezipaměti.
+- Ruční změny jsou explicitní a auditovatelné a nevzniká ID poskytovatele na úrovni epizody.
 
-### 3. Implementovat vrstvu executorů
+### P0.3 Implementovat minimální UI pro kontrolu člověkem
 
 Cíl:
 
-- Vytvořit balíček executorů pro bezpečné dávkové přejmenování pouze z manifestu.
+- Zajistit praktickou trvalou kontrolu před zavedením plánování přejmenování.
 
 Výstupy:
 
-- executor dry-run jako výchozí chování;
-- režim skutečných změn s explicitním přihlášením;
-- protokol pro vrácení každé provedené operace v dávce;
-- kontroly kolizí a existence cíle.
+- Stránky FastAPI pro fronty `review_required`, `ready_for_approval` a nevyřešené položky.
+- Vyhledávání, filtrování, řazení a stránkování velkých knihoven.
+- Opravy, výběr poskytovatele, schválení, zamítnutí, odložení, poznámky a hlídané hromadné akce.
+- Viditelné upozornění důvěryhodné sítě a žádný endpoint pro skutečné změny souborového systému.
+- Zaměřené ADR hranic UI a služeb vytvořené s implementovanými rozhraními.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Žádná cesta přejmenování neobchází vstupní manifest.
-- Dry-run nemění souborový systém.
-- Chyby se protokolují s dostatkem kontextu pro opakování nebo ruční vrácení změn.
+- Každá změna stavu používá sdílené služby, je ověřená, trvalá po restartu a auditovatelná.
+- Hromadné akce odmítnou smíšený nebo nezpůsobilý výběr a neobcházejí pravidla položek.
+- Testy tras prokážou, že první UI nemá operaci skutečného provedení.
 
-### 4. Přidat příkazy CLI pro workflow přejmenování
+### P0.4 Přidat sdílený manifest a planner přejmenování
 
 Cíl:
 
-- Vyjádřit v CLI explicitní tok parse -> plan -> execute.
+- Vytvářet deterministické kontrolovatelné plány pouze ze schválených entit.
 
 Výstupy:
 
-- příkaz `plan-rename`;
-- příkaz `execute-rename`;
-- volitelný příkaz `validate-manifest`.
+- Verzované modely `RenameManifest` a `RenameEntry` pro druhy manifestu `rename` a `rollback`.
+- Pluggable kontrakty `NamingProfile` a `OutputScheme` s explicitními registry, `JellyfinNamingProfile` a jedním
+  pevným `JellyfinDefaultOutputScheme`. Parsery nesmějí vykreslovat výstupní cesty; nastavitelné šablony zůstávají P3.
+- Kanonická serializace JSON a SHA-256 digest.
+- Otisky zdrojových souborů a stromové digesty složek s neprůhledným členstvím ignorovaných položek.
+- Deterministické cíle pro složky, videa, podporované titulky, části vícedílných médií a verze.
+- Trvalé neměnné manifesty a čitelný náhled v UI seskupený podle logických dávek. Náhled zobrazí současné a navržené
+  cesty, související soubory, identitu poskytovatele, upozornění, chyby validace a přesný schvalovaný digest; surový
+  JSON je artefakt ke stažení, nikoli hlavní kontrolní pohled.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- `execute-rename` okamžitě skončí chybou, pokud manifest chybí nebo je neplatný.
-- Skutečné provedení vyžaduje explicitní přepínač a ve výchozím stavu není možné.
-- Příkazy vypisují srozumitelné souhrny pro uživatele a cesty k výstupům.
+- Planner odmítne nevyřešené, neschválené, neplatné, nekompatibilní či konfliktní vstupy a symbolické odkazy.
+- Opakované plánování nad nezměněným schváleným stavem vytvoří ekvivalentní položky a digest.
+- Každý cíl splňuje přijatá pravidla názvů a struktury pro Jellyfin.
+- Manifest ukládá identifikátory a verze profilu názvů i výstupního schématu a vykreslený výstup projde společným
+  ověřením cest, kolizí, ID poskytovatele, `.nfo` a bezpečnosti.
 
-### 5. Definovat architektonický kontrakt CLI a UI (ADR)
+### P0.5 Implementovat bezpečné provedení a rollback
 
 Cíl:
 
-- Před implementací webové vrstvy ustálit integrační hranice.
+- Provádět pouze ověřené manifesty s explicitním řízením a obnovitelnými důkazy částečného selhání.
 
 Výstupy:
 
-- ADR popisující odpovědnosti CLI a UI;
-- jasná rozhraní služeb použitelná z CLI i webové aplikace;
-- bezpečnostní model místního nasazení včetně autentizace, zásad CSRF a předpokladů důvěryhodné sítě.
+- Výchozí dry-run a explicitní režim skutečného provedení.
+- Kontroly integrity manifestu, otisků, kolizí, nepřítomnosti cíle a globálního locku na určených hranicích.
+- Trvalé stavy úspěšných, neúspěšných, čekajících a nejistých operací se zastavením při první chybě.
+- Neměnný manifest rollbacku jen z potvrzených úspěšných operací ve sdíleném schématu, s obráceným pořadím seznamu,
+  odkazem na původní operaci, současným otiskem zdroje a vlastním digestem.
+- Samostatný dry-run, potvrzení a audit rollbacku; žádný automatický rollback ani manifest shellových příkazů.
+- Zaměřené ADR bezpečnosti provedení vytvořené s konkrétním návrhem locku a auditu.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Vstupní body CLI a UI neduplikují obchodní logiku.
-- Planner a executor zůstávají jediným zdrojem pravdy pro změny.
-- Model hrozeb a provozní předpoklady jsou explicitně zdokumentované.
+- Žádná změna neobchází ověřený manifest a dry-run nic nezapisuje.
+- Změněné zdroje, existující cíle, kolize, neplatné digesty a souběžné provedení selžou před nebezpečnou změnou.
+- Provedení nikdy nemění vstupní manifest ani nepřepisuje existující cestu.
+- Testy chyb prokážou klasifikaci auditu a bezpečnou tvorbu manifestu rollbacku.
 
-## P1 – Důležité následné práce
-
-### 5. Dokončit exporty sestav
+### P0.6 Integrovat operace workflow do CLI a UI
 
 Cíl:
 
-- Rozšířit výstupy sestav pro provoz a kontrolu.
+- Zpřístupnit sdílené služby planneru a executoru v jasném workflow operátora.
 
 Výstupy:
 
-- CSV reportér pro kontrolní a nevyřešené datové sady;
-- volitelný formát souhrnu provedení manifestu, nejprve JSON a případně CSV.
+- Příkazy CLI pro plán, validaci, dry-run a explicitní provedení manifestů přejmenování a rollbacku.
+- Náhled manifestu a schválení přesného digestu, spuštění planneru, výsledky dry-run a historie auditu v UI.
+- Jasné souhrny, cesty artefaktů, kódy selhání a vazby mezi původními běhy a rollbackem.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Exportní příkazy vytvářejí platné soubory ze stejné zdrojové datové sady.
-- Výstup jasně označuje nevyřešené položky a položky vyžadující ruční kontrolu.
+- Skutečné provedení zůstává jen v CLI a vyžaduje explicitní přepínač.
+- CLI a UI vytvářejí konzistentní stavy a výsledky přes sdílené služby.
+- End-to-end testy pokrývají analýzu, schválení, plán, dry-run, chybu provedení a dry-run rollbacku.
 
-### 6. Zlepšit provozní protokolování dlouhých běhů
+### P0.7 Zabalit podporované nasazení Compose
 
 Cíl:
 
-- Posílit pozorovatelnost při zpracování velkých knihoven.
+- Poskytnout podporované nasazení pro jediného operátora bez oslabení bezpečnosti souborového systému.
 
 Výstupy:
 
-- strukturované události začátku a konce příkazu s uplynulým časem;
-- korelační ID běhu v kontextu protokolu;
-- volitelný zápis protokolu do `data/workspace/logs` vedle standardního výstupu.
+- Produkční Dockerfile bez root uživatele, `.dockerignore`, Compose, healthcheck a příklad prostředí.
+- Dlouhodobá aplikace s médii pouze pro čtení a trvalým workspace.
+- Jednorázová služba profilu execution s explicitně zapisovatelnými médii, bez sítě, webového portu a restartu.
+- Reprodukovatelný build `linux/amd64`, smoke test, metadata obrazu a release workflow.
+- Zaměřené ADR nasazení pro mounty, oprávnění, upgrade, zálohu a obnovu.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Dlouhé běhy lze sledovat od začátku do konce podle jediného identifikátoru.
-- Operátor může protokoly prohlédnout i po skončení příkazu bez historie terminálu.
+- Běžné `docker compose up` nemůže měnit knihovnu médií.
+- Nepodporované platformy selžou běžně bez skryté emulace.
+- Databáze a artefakty workspace přežijí upgrade s otestovaným postupem migrace a zálohy.
 
-### 7. Zlepšit přívětivost CLI
+### P0.8 Dokončit dokumentaci operátora a end-to-end ověření
 
 Cíl:
 
-- Zlepšit ergonomii příkazů a kvalitu zpětné vazby.
+- Zajistit použitelnost podporovaného workflow bez nezdokumentovaných znalostí.
 
 Výstupy:
 
-- jednotná nápověda s praktickými příklady hlavních příkazů;
-- dokumentované návratové kódy pro úspěch, režim varování ověření a fatální chybu;
-- volitelné přepínače `--no-html` a `--no-json` pro sestavy příkazu `parse`.
+- Compose-first quick start, nastavení, kontrola, provedení, rollback, záloha, upgrade a řešení potíží.
+- Oddělené příklady aplikace jen pro čtení a explicitně zapisujícího executoru.
+- Reprezentativní fixture velké knihovny a ověření výkonu.
+- Aktualizované dvojice anglických a českých README a dokumentace podle skutečného chování.
 
-Akceptační kritéria:
+Kritéria přijetí:
 
-- Běžný operátorský postup je pochopitelný pouze z výstupu `--help`.
-- Chování generování sestav je explicitní a konfigurovatelné.
+- Nový operátor dokončí bezpečné workflow bez přímé editace stavových souborů nebo hádání příkazů.
+- Dokumentace nevydává plánované chování, nepodporované platformy ani veřejné vystavení za podporované.
+- Projdou kontroly kvality repozitáře a end-to-end testy workflow.
 
-### 8. Implementovat webové UI pro kontrolu a schválení
+## P1 - Důležité navazující práce
 
-Cíl:
+### P1.1 Přidat potvrzení názvy epizod
 
-- Umožnit škálovatelnou ruční kontrolu a schválení velkého množství rozhodnutí o přejmenování.
+- Nejprve změřit kontrolní frontu seriálů bez roku.
+- Pokud to data odůvodní, implementovat přijaté vzorkování dvou nebo tří epizod a skórování 75/25.
+- Důkazy epizod cachovat opakovatelně a nikdy nevytvářet ID poskytovatele na úrovni epizody.
 
-Výstupy:
+### P1.2 Dokončit exporty CSV a provedení
 
-- aplikace FastAPI se stránkami položek vyžadujících kontrolu a nevyřešených položek;
-- hledání, filtrování, řazení a stránkování velkých datových sad;
-- hromadné akce: schválit, zamítnout, odložit a přidat poznámku či důvod;
-- náhled manifestu s cestami před a po změně, ID poskytovatele, jistotou a rizikovými příznaky;
-- endpointy spouštějící planner a dry-run executoru.
+- Přidat kontrolní a nevyřešené exporty CSV ze stejné trvalé datové sady.
+- Přidat JSON souhrn provedení; CSV jen tehdy, pokud má konkrétní hodnotu pro operátora.
 
-Akceptační kritéria:
+### P1.3 Zlepšit sledování dlouhých běhů
 
-- Operátor zpracuje rozsáhlé kontrolní sady výrazně rychleji než úpravami jednotlivých souborů.
-- Každá akce je auditovatelná a trvale uložená včetně toho, kdo, kdy a co změnil.
-- UI nikdy neprovede skutečné přejmenování bez explicitního potvrzení a bezpečnostních kontrol.
+- Přidat korelační ID, strukturované události začátku a konce, dobu, průběh a volitelné trvalé logy.
+- Nezapisovat do diagnostiky tajné hodnoty ani URL s přihlašovacími údaji.
 
-## P2 – Údržba a konzistence
+### P1.4 Zlepšit ergonomii CLI
 
-### 9. Sjednotit pojmenování struktury testů
+- Přidat konzistentní příklady, zdokumentované návratové kódy, přepínače sestav a použitelné souhrny.
+- Bezpečnostní přepínače ponechat explicitní a nezavádět pohodlné výchozí hodnoty umožňující změny.
 
-Cíl:
+## P2 - Údržba a volitelné zpevnění
 
-- Odstranit nesoulad v názvu adresáře testů.
+### P2.1 Sladit názvy struktury testů
 
-Výstupy:
+- Sladit existující nesoulad `tests/parses` se `src/parsers` bez regresí sběru testů.
 
-- sladit `tests/parses` s názvem `src/parsers`;
-- zachovat stabilní importy a vyhledávání testů.
+### P2.2 Postupně zpřísnit typovou kontrolu
 
-Akceptační kritéria:
+- Nejprve zpřísnit nové kritické moduly a doplnit cílené anotace tam, kde zůstanou užitečné a bez šumu.
 
-- Cesty testů a zdrojů si zřetelně odpovídají.
-- Nedojde k regresi při sběru testů.
+### P2.3 Přidat autentizovaný vzdálený přístup
 
-### 10. Postupně zpřísnit zásady kontroly typů
+- Autentizaci, session, CSRF, práci s důvěryhodnou proxy a návod k HTTPS reverse proxy řešit jako nadstavbu.
+- Integraci Synology účtu ponechat volitelnou a nezávislou na provozu v důvěryhodné privátní síti.
 
-Cíl:
+## P3 - Seznam budoucích možností (neblokuje vydání)
 
-- Bezpečně zvýšit přísnost Pyrightu.
+### P3.1 Přidat další profily názvů pro mediální servery
 
-Výstupy:
+- Před implementací prozkoumat a určit profil Plex včetně tagů poskytovatele a názvů epizod.
+- Emby považovat za alias profilu Jellyfin jen tehdy, pokud testy kompatibility prokážou shodný požadovaný výstup;
+  jinak přidat samostatnou implementaci.
+- Další profily zvažovat jen tehdy, když zapadnou do základního modelu a zachovají všechna bezpečnostní pravidla.
+- Vyloučit workflow Kodi vyžadující `.nfo` spravované aplikací.
 
-- nejprve znovu posoudit hlášení neznámých typů v nových modulech plannerů a executorů;
-- doplnit cílené anotace ve slabších místech nalezených během implementace.
+### P3.2 Zobecnit logiku jazyků a lokalizace
 
-Akceptační kritéria:
+- Oddělit jazyk metadat, fallback zobrazovaného názvu, značky zvuku a značky titulků.
+- Ponechat češtinu a `CZ` jako výchozí hodnoty prvního vydání a navrhnout ověřené jazykové tagy a mapování názvů.
+- Předat tyto volby do `OutputScheme` místo větvení parserů nebo serverových profilů podle jazyka.
 
-- Nové kritické moduly mají silnější typové pokrytí.
-- Typové chyby zůstávají relevantní a bez zbytečného šumu.
+### P3.3 Přidat omezené šablony názvů
 
-### 11. Úplnost dokumentace pro operátory
-
-Cíl:
-
-- Zajistit soulad dokumentace se skutečným workflow a usnadnit první použití.
-
-Výstupy:
-
-- po dokončení fází 6 a 7 doplnit dokumentaci workflow přejmenování;
-- doplnit řešení potíží s klíči poskytovatelů, mezipamětí a nevyřešenými shodami;
-- doplnit ukázkovou posloupnost scan -> parse -> plan -> execute dry-run;
-- doplnit příručku webového UI pro místní spuštění, kontrolní workflow a bezpečnostní model.
-
-Akceptační kritéria:
-
-- Nový operátor zvládne podle dokumentace bezpečný workflow bez dohadů.
-- Dokumentace odpovídá současným příkazům CLI a výstupům sestav.
+- Rozšířit `OutputScheme` o pojmenované předvolby a typované tokeny, například
+  `{{year}} - {{movie_title}} - {{provider_tag}} - {{language}}`, s náhledem a ověřením.
+- Odmítnout libovolný kód, neplatné cesty, kolize, nejednoznačný výstup a šablony obcházející profil nebo bezpečnost.
 
 ## Doporučené pořadí implementace
 
-1. Modely a schéma přejmenování.
-2. Služba planneru a generování manifestu.
-3. Služba executoru s výchozím dry-run.
-4. Integrace příkazů plan a execute do CLI.
-5. Architektonický ADR pro CLI a UI.
-6. Testovací sada planneru a executoru.
-7. Rozšíření sestav o CSV.
-8. Zlepšení protokolování a UX CLI.
-9. Kontrolní webové UI FastAPI a HTML.
-10. Závěrečná aktualizace dokumentace workflow přejmenování a provozu UI.
+1. Opravit seskupování entit a přidat SQLite pro stav workflow.
+2. Implementovat základní kontrolovatelný výběr poskytovatele.
+3. Implementovat minimální trvalé kontrolní UI.
+4. Přidat sdílené schéma manifestu, planner a náhled v UI.
+5. Přidat bezpečný dry-run, provedení, audit a rollback.
+6. Integrovat operace CLI a UI přes sdílené služby.
+7. Zabalit a ověřit podporované nasazení Compose.
+8. Dokončit dokumentaci operátora a end-to-end ověření.
+9. Před výběrem prací P1, P2 nebo wishlistu změřit skutečné provozní potíže.
 
-## Strategie testování zbývajících fází
+## Průřezová strategie testování
 
-Požadované testy funkcí planneru a executoru:
+- Seskupování domény, role složek, limit hloubky, titulky, vícedílná média, verze, smíšený obsah a symlinky.
+- Migrace SQLite, trvalost po restartu, platné přechody stavů, audit a souběžné změny.
+- Hranice poskytovatele, konflikty roku, fallback, nejednoznačnost, původ mezipaměti a explicitní ruční změny.
+- Filtrování a stránkování UI, opravy, schválení, hlídané hromadné akce a nepřítomnost skutečného provedení.
+- Determinismus manifestu a stromového digestu, změny zdrojů, kolize a odmítnutí symbolických odkazů.
+- Dry-run bez změn, explicitní provedení, globální lock, zastavení při chybě a trvalé stavy auditu.
+- Pořadí rollbacku ve sdíleném schématu, integrita, odmítnutí změněného zdroje a existujícího cíle a samostatný audit.
+- End-to-end workflow CLI a UI nad reprezentativními fixtures bez živých API a externích souborových systémů.
 
-- vytvoření platného manifestu z čistých parsovaných vstupů;
-- odmítnutí manifestu s nevyřešenými nebo konfliktními položkami;
-- potvrzení nulových změn souborového systému při dry-run příkazu `execute-rename`;
-- tvrdé selhání `execute-rename` bez explicitního přepínače provedení;
-- protokolování selhání dávky a integrita protokolu pro vrácení změn;
-- koncový test CLI nad testovací knihovnou;
-- integrační testy UI pro schvalovací akce a přechody stavů manifestu;
-- test toku UI do dry-run executoru bez změn souborového systému.
+## Definice dokončení pro připravenost operátora
 
-## Definice dokončení workflow přejmenování
+- Podporovaná aplikace Compose se spustí bez Pythonu na hostiteli a ve výchozím stavu připojí média jen pro čtení.
+- Entity, kandidáti, opravy, schválení, poznámky a stav auditu přežijí restart.
+- Minimální UI umožní praktickou kontrolu a nemá endpoint skutečného provedení.
+- Před provedením je povinný schválený, ověřený a neměnný manifest a úspěšný dry-run.
+- Skutečné provedení je explicitní, pouze v CLI, zamčené, auditované, zastaví se při chybě a má popsaný rollback.
+- Anglická a česká dokumentace operátora popisuje nastavení až obnovu a odpovídá otestovanému chování.
 
-Workflow přejmenování je dokončen až po splnění všech následujících bodů:
+## Rutina aktualizace
 
-- Generování manifestu existuje a je před provedením povinné.
-- Přejmenování používá ve výchozím stavu dry-run.
-- Skutečné provedení vyžaduje explicitní přihlášení.
-- Pro každý běh dávky vzniká protokol pro vrácení změn.
-- Příkazy CLI pro plánování a provedení jsou zdokumentované a otestované.
-- Koncové testy ověřují bezpečné chování při selhání.
-
-## Rutina provozní aktualizace
-
-Při zahájení úkolu:
-
-- Přesuňte jej v tomto souboru nebo souvisejícím systému úkolů do stavu Rozpracováno.
-- Připojte odkazy na implementační pull requesty a související testy.
-
-Po dokončení úkolu:
-
-- Označte jej jako Hotovo a doplňte krátké poznámky k ověření.
-- Následný technický dluh zaznamenejte jako nový úkol fronty s prioritou.
-
-Tento soubor udržujte jako jediný praktický plán realizace vývoje.
+Při zahájení práce označte související položku backlogu v issue trackeru jako rozpracovanou a propojte implementační
+PR a testy. Po dokončení zaznamenejte ověření a pro zbývající dluh vytvořte samostatná navazující issues. Datované
+důkazy ověření udržujte oddělené od tvrzení o produktové úplnosti.
