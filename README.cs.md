@@ -1,4 +1,4 @@
-# jellyfin-media-normalizer
+# media-library-normalizer
 
 [English](README.md) | [Čeština](README.cs.md)
 
@@ -20,8 +20,8 @@ ověří parsované výsledky a vyhledá ID poskytovatelů v TMDb a TVDB.
 ## Instalace
 
 ```bash
-git clone https://github.com/pokornyIt/jellyfin-media-normalizer.git
-cd jellyfin-media-normalizer
+git clone https://github.com/pokornyIt/media-library-normalizer.git
+cd media-library-normalizer
 uv sync
 ```
 
@@ -29,11 +29,11 @@ uv sync
 
 ```bash
 # Pouze skenování — API klíče nejsou potřeba
-uv run jellyfin-media-normalizer scan
+uv run media-library-normalizer scan
 
 # Úplné parsování s vyhledáním poskytovatele — vyžaduje API klíče
 export $(cat .env | grep -v '^#' | xargs)
-uv run jellyfin-media-normalizer parse
+uv run media-library-normalizer parse
 ```
 
 Příkaz `parse`:
@@ -54,22 +54,22 @@ Všechna nastavení se načítají z proměnných prostředí. V kořeni projekt
 
 ```ini
 # Cesty
-JMN_LIBRARY_PATH=./data/library
-JMN_WORKSPACE_PATH=./data/workspace
+MLN_LIBRARY_PATH=./data/library
+MLN_WORKSPACE_PATH=./data/workspace
 
 # Protokolování
-JMN_LOG_LEVEL=INFO
-JMN_LOG_FORMAT=text
+MLN_LOG_LEVEL=INFO
+MLN_LOG_FORMAT=text
 
 # Bezpečnost
-JMN_DRY_RUN=true
+MLN_DRY_RUN=true
 
 # API klíče poskytovatelů
-JMN_TMDB_API_KEY=your-tmdb-api-key
-JMN_TVDB_API_KEY=your-tvdb-api-key
+MLN_TMDB_API_KEY=your-tmdb-api-key
+MLN_TVDB_API_KEY=your-tvdb-api-key
 
 # Jak často protokolovat průběh vyhledávání poskytovatelů (výchozí: každých 100 položek)
-JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
+MLN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 ```
 
 ### Úplný přehled proměnných prostředí
@@ -77,26 +77,26 @@ JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL=100
 <!-- markdownlint-disable MD013 -->
 | Proměnná                                | Výchozí hodnota             | Popis                                                      |
 | --------------------------------------- | --------------------------- | ---------------------------------------------------------- |
-| `JMN_APP_NAME`                          | `jellyfin-media-normalizer` | Název aplikace používaný v protokolech                     |
-| `JMN_LIBRARY_PATH`                      | `./data/library`            | Kořenová cesta prohledávané knihovny médií                 |
-| `JMN_WORKSPACE_PATH`                    | `./data/workspace`          | Kořenová cesta pro generované soubory                      |
-| `JMN_CACHE_PATH`                        | `{workspace}/cache`         | Adresář mezipaměti ID poskytovatelů                        |
-| `JMN_REPORTS_PATH`                      | `{workspace}/reports`       | Výstupní adresář sestav                                    |
-| `JMN_MANIFESTS_PATH`                    | `{workspace}/manifests`     | Adresář manifestů přejmenování                             |
-| `JMN_LOGS_PATH`                         | `{workspace}/logs`          | Adresář souborů protokolu                                  |
-| `JMN_LOG_LEVEL`                         | `INFO`                      | Úroveň protokolování (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `JMN_LOG_FORMAT`                        | `text`                      | Formát protokolu (`text` nebo `json`)                      |
-| `JMN_DRY_RUN`                           | `true`                      | Ve výchozím stavu zakazuje destruktivní operace            |
-| `JMN_TMDB_API_KEY`                      | *(žádná)*                   | API klíč TMDb pro online vyhledávání filmů                 |
-| `JMN_TVDB_API_KEY`                      | *(žádná)*                   | API klíč TVDB pro online vyhledávání televizních seriálů   |
-| `JMN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Protokolovat průběh každých N položek vyhledávání          |
+| `MLN_APP_NAME`                          | `media-library-normalizer`  | Název aplikace používaný v protokolech                     |
+| `MLN_LIBRARY_PATH`                      | `./data/library`            | Kořenová cesta prohledávané knihovny médií                 |
+| `MLN_WORKSPACE_PATH`                    | `./data/workspace`          | Kořenová cesta pro generované soubory                      |
+| `MLN_CACHE_PATH`                        | `{workspace}/cache`         | Adresář mezipaměti ID poskytovatelů                        |
+| `MLN_REPORTS_PATH`                      | `{workspace}/reports`       | Výstupní adresář sestav                                    |
+| `MLN_MANIFESTS_PATH`                    | `{workspace}/manifests`     | Adresář manifestů přejmenování                             |
+| `MLN_LOGS_PATH`                         | `{workspace}/logs`          | Adresář souborů protokolu                                  |
+| `MLN_LOG_LEVEL`                         | `INFO`                      | Úroveň protokolování (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `MLN_LOG_FORMAT`                        | `text`                      | Formát protokolu (`text` nebo `json`)                      |
+| `MLN_DRY_RUN`                           | `true`                      | Ve výchozím stavu zakazuje destruktivní operace            |
+| `MLN_TMDB_API_KEY`                      | *(žádná)*                   | API klíč TMDb pro online vyhledávání filmů                 |
+| `MLN_TVDB_API_KEY`                      | *(žádná)*                   | API klíč TVDB pro online vyhledávání televizních seriálů   |
+| `MLN_PROVIDER_LOOKUP_PROGRESS_INTERVAL` | `100`                       | Protokolovat průběh každých N položek vyhledávání          |
 <!-- markdownlint-enable MD013 -->
 
 ### API klíč TMDb
 
 1. Zaregistrujte se na [themoviedb.org](https://www.themoviedb.org/) a vytvořte si bezplatný účet.
 2. Přejděte do **Settings → API** a zkopírujte svůj **API Key (v3 auth)**.
-3. Nastavte `JMN_TMDB_API_KEY` na tuto hodnotu.
+3. Nastavte `MLN_TMDB_API_KEY` na tuto hodnotu.
 
 ### API klíč TVDB
 
@@ -105,16 +105,16 @@ API klíče TVDB jsou vázané na **projekt**, nikoli na osobu. Musíte zaregist
 1. Navštivte [thetvdb.com/api-information](https://www.thetvdb.com/api-information) a vytvořte si účet.
 2. Kliknutím na **Sign Up** zaregistrujte nový projekt a vyplňte:
    - **Company / Project Revenue:** `Less than $50k per year`
-   - **Company or Project Name:** `jellyfin-media-normalizer`
+   - **Company or Project Name:** `media-library-normalizer`
    - **Description:**
 
      ```text
      Non-commercial open-source tool for normalizing and validating media library
      names for Jellyfin. Uses TVDB data for TV series metadata matching.
-     Project: https://github.com/pokornyIt/jellyfin-media-normalizer
+     Project: https://github.com/pokornyIt/media-library-normalizer
      ```
 
-3. Zkopírujte **API Key** a nastavte `JMN_TVDB_API_KEY` na tuto hodnotu.
+3. Zkopírujte **API Key** a nastavte `MLN_TVDB_API_KEY` na tuto hodnotu.
 
 Bezplatná úroveň TVDB vyžaduje uvedení zdroje. Dodržujte jejich
 [licenční podmínky](https://www.thetvdb.com/api-information).
@@ -129,7 +129,7 @@ spárují, nové položky zůstanou nevyřešené.
 Prohledá knihovnu médií a vypíše souhrn.
 
 ```bash
-uv run jellyfin-media-normalizer scan
+uv run media-library-normalizer scan
 ```
 
 Výstup:
@@ -148,10 +148,10 @@ Prohledá knihovnu, parsuje názvy, ověří výsledky a vyhledá ID poskytovate
 
 ```bash
 export $(cat .env | grep -v '^#' | xargs)
-uv run jellyfin-media-normalizer parse
+uv run media-library-normalizer parse
 
 # Nebo s vlastní cestou sestavy
-uv run jellyfin-media-normalizer parse --output /path/to/custom-report.json
+uv run media-library-normalizer parse --output /path/to/custom-report.json
 ```
 
 Výstup:
@@ -180,8 +180,8 @@ Pořadí zjišťování ID poskytovatele:
 Prohledá knihovnu, parsuje názvy a poté zapíše úplnou sestavu všech parsovaných položek ve formátu JSON.
 
 ```bash
-uv run jellyfin-media-normalizer report-scan
-uv run jellyfin-media-normalizer report-scan --output /custom/path/report.json
+uv run media-library-normalizer report-scan
+uv run media-library-normalizer report-scan --output /custom/path/report.json
 ```
 
 Výchozí výstup: `data/workspace/reports/report-scan-results.json`
@@ -193,7 +193,7 @@ Výchozí výstup: `data/workspace/reports/report-scan-results.json`
 Inicializuje prázdný soubor mezipaměti poskytovatelů. Použijte jej k obnovení mezipaměti nalezených poskytovatelů.
 
 ```bash
-uv run jellyfin-media-normalizer bootstrap-providers
+uv run media-library-normalizer bootstrap-providers
 ```
 
 Výstup:
@@ -209,7 +209,7 @@ Provider cache bootstrapped: data/workspace/cache/provider_ids.json
 Zobrazí aktuální běhová nastavení.
 
 ```bash
-uv run jellyfin-media-normalizer info
+uv run media-library-normalizer info
 ```
 
 ---
@@ -219,7 +219,7 @@ uv run jellyfin-media-normalizer info
 Ověří, zda zadaná cesta existuje v souborovém systému. Hodí se při diagnostice konfigurace cest.
 
 ```bash
-uv run jellyfin-media-normalizer validate-path /path/to/check
+uv run media-library-normalizer validate-path /path/to/check
 ```
 
 ## Vývoj
@@ -241,7 +241,7 @@ uv run jellyfin-media-normalizer validate-path /path/to/check
 uv run pytest
 
 # Spuštění testů s pokrytím
-uv run pytest --cov=src/jellyfin_media_normalizer --cov-report=term-missing
+uv run pytest --cov=src/media_library_normalizer --cov-report=term-missing
 
 # Kontrola stylu a formátování
 uv run ruff check src/ tests/

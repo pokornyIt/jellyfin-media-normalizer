@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.provider_match import ProviderMatch
-from jellyfin_media_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.provider_match import ProviderMatch
+from media_library_normalizer.providers.provider_id_cache import ProviderIdCacheResolver
 
 
 def _make_parsed_item(

@@ -2,7 +2,7 @@
 
 [English](../en/DEVELOPMENT_PLAN.md) | [Čeština](DEVELOPMENT_PLAN.md)
 
-Tento dokument sleduje ověřený stav implementace a praktický backlog projektu jellyfin-media-normalizer. Produktová
+Tento dokument sleduje ověřený stav implementace a praktický backlog projektu media-library-normalizer. Produktová
 pravidla určuje [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md), přijatý směr a zdůvodnění popisuje
 [PRODUCT_DEVELOPMENT_BRIEF.md](PRODUCT_DEVELOPMENT_BRIEF.md).
 

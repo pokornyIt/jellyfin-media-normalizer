@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.settings import Settings, _optional_env, _parse_bool
+from media_library_normalizer.settings import Settings, _optional_env, _parse_bool
 
 
 class TestParseBool:
@@ -86,24 +86,24 @@ class TestSettingsFromEnv:
         :param monkeypatch: pytest fixture for environment patching.
         """
         for var in (
-            "JMN_APP_NAME",
-            "JMN_LIBRARY_PATH",
-            "JMN_WORKSPACE_PATH",
-            "JMN_CACHE_PATH",
-            "JMN_REPORTS_PATH",
-            "JMN_MANIFESTS_PATH",
-            "JMN_LOGS_PATH",
-            "JMN_LOG_LEVEL",
-            "JMN_LOG_FORMAT",
-            "JMN_DRY_RUN",
-            "JMN_TMDB_API_KEY",
-            "JMN_TVDB_API_KEY",
+            "MLN_APP_NAME",
+            "MLN_LIBRARY_PATH",
+            "MLN_WORKSPACE_PATH",
+            "MLN_CACHE_PATH",
+            "MLN_REPORTS_PATH",
+            "MLN_MANIFESTS_PATH",
+            "MLN_LOGS_PATH",
+            "MLN_LOG_LEVEL",
+            "MLN_LOG_FORMAT",
+            "MLN_DRY_RUN",
+            "MLN_TMDB_API_KEY",
+            "MLN_TVDB_API_KEY",
         ):
             monkeypatch.delenv(var, raising=False)
 
         settings: Settings = Settings.from_env()
 
-        assert settings.app_name == "jellyfin-media-normalizer"
+        assert settings.app_name == "media-library-normalizer"
         assert settings.library_path == Path("./data/library")
         assert settings.workspace_path == Path("./data/workspace")
         assert settings.cache_path == Path("./data/workspace/cache")
@@ -119,10 +119,10 @@ class TestSettingsFromEnv:
     @pytest.mark.parametrize(
         ("env_var", "env_value", "attr", "expected"),
         [
-            ("JMN_APP_NAME", "my-app", "app_name", "my-app"),
-            ("JMN_LIBRARY_PATH", "/media/movies", "library_path", Path("/media/movies")),
-            ("JMN_LOG_LEVEL", "debug", "log_level", "DEBUG"),
-            ("JMN_LOG_FORMAT", "JSON", "log_format", "json"),
+            ("MLN_APP_NAME", "my-app", "app_name", "my-app"),
+            ("MLN_LIBRARY_PATH", "/media/movies", "library_path", Path("/media/movies")),
+            ("MLN_LOG_LEVEL", "debug", "log_level", "DEBUG"),
+            ("MLN_LOG_FORMAT", "JSON", "log_format", "json"),
         ],
     )
     def test_individual_env_vars_override_defaults(
@@ -165,23 +165,23 @@ class TestSettingsFromEnv:
         dry_run_value: str,
         expected: bool,
     ) -> None:
-        """Parse the ``JMN_DRY_RUN`` variable as a boolean correctly.
+        """Parse the ``MLN_DRY_RUN`` variable as a boolean correctly.
 
         :param monkeypatch: pytest fixture for environment patching.
         :param dry_run_value: Raw string value for dry-run env var.
         :param expected: Expected parsed boolean result.
         """
-        monkeypatch.setenv("JMN_DRY_RUN", dry_run_value)
+        monkeypatch.setenv("MLN_DRY_RUN", dry_run_value)
         settings: Settings = Settings.from_env()
         assert settings.dry_run is expected
 
     def test_workspace_derived_paths_use_custom_workspace(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Derive sub-paths from ``JMN_WORKSPACE_PATH`` when no overrides are set.
+        """Derive sub-paths from ``MLN_WORKSPACE_PATH`` when no overrides are set.
 
         :param monkeypatch: pytest fixture for environment patching.
         """
-        monkeypatch.setenv("JMN_WORKSPACE_PATH", "/data/ws")
-        for var in ("JMN_CACHE_PATH", "JMN_REPORTS_PATH", "JMN_MANIFESTS_PATH", "JMN_LOGS_PATH"):
+        monkeypatch.setenv("MLN_WORKSPACE_PATH", "/data/ws")
+        for var in ("MLN_CACHE_PATH", "MLN_REPORTS_PATH", "MLN_MANIFESTS_PATH", "MLN_LOGS_PATH"):
             monkeypatch.delenv(var, raising=False)
 
         settings: Settings = Settings.from_env()
@@ -196,8 +196,8 @@ class TestSettingsFromEnv:
 
         :param monkeypatch: pytest fixture for environment patching.
         """
-        monkeypatch.setenv("JMN_WORKSPACE_PATH", "/data/ws")
-        monkeypatch.setenv("JMN_CACHE_PATH", "/tmp/cache")
+        monkeypatch.setenv("MLN_WORKSPACE_PATH", "/data/ws")
+        monkeypatch.setenv("MLN_CACHE_PATH", "/tmp/cache")
 
         settings: Settings = Settings.from_env()
 
@@ -207,8 +207,8 @@ class TestSettingsFromEnv:
     @pytest.mark.parametrize(
         ("api_key_var", "attr"),
         [
-            ("JMN_TMDB_API_KEY", "tmdb_api_key"),
-            ("JMN_TVDB_API_KEY", "tvdb_api_key"),
+            ("MLN_TMDB_API_KEY", "tmdb_api_key"),
+            ("MLN_TVDB_API_KEY", "tvdb_api_key"),
         ],
     )
     def test_api_key_set_when_provided(
@@ -230,8 +230,8 @@ class TestSettingsFromEnv:
     @pytest.mark.parametrize(
         ("api_key_var", "attr"),
         [
-            ("JMN_TMDB_API_KEY", "tmdb_api_key"),
-            ("JMN_TVDB_API_KEY", "tvdb_api_key"),
+            ("MLN_TMDB_API_KEY", "tmdb_api_key"),
+            ("MLN_TVDB_API_KEY", "tvdb_api_key"),
         ],
     )
     def test_api_key_none_when_absent_or_blank(

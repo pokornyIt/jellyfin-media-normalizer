@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.confidence_level import ConfidenceLevel
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.validators.confidence_scorer import ConfidenceScorer
+from media_library_normalizer.models.confidence_level import ConfidenceLevel
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.validators.confidence_scorer import ConfidenceScorer
 
 
 class TestConfidenceScorer:

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.media_type import MediaType
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.parsed_name import ParsedName
-from jellyfin_media_normalizer.parsers.media_parser import MediaParser
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.media_type import MediaType
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.parsed_name import ParsedName
+from media_library_normalizer.parsers.media_parser import MediaParser
 
 
 def _item(filename: str) -> MediaItem:

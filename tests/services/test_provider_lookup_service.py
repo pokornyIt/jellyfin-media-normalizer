@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.provider_match import ProviderMatch
-from jellyfin_media_normalizer.services.provider_lookup_service import ProviderLookupService
-from jellyfin_media_normalizer.settings import Settings
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.provider_match import ProviderMatch
+from media_library_normalizer.services.provider_lookup_service import ProviderLookupService
+from media_library_normalizer.settings import Settings
 
 
 def _make_settings(workspace_path: Path | None = None) -> Settings:

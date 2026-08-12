@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.utils.paths import ensure_directory
+from media_library_normalizer.utils.paths import ensure_directory
 
 
 class TestEnsureDirectory:

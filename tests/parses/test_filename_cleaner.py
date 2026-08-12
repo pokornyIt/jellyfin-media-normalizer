@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from jellyfin_media_normalizer.parsers.filename_cleaner import FilenameCleaner
+from media_library_normalizer.parsers.filename_cleaner import FilenameCleaner
 
 
 class TestFilenameCleaner:

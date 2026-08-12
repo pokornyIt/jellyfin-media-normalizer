@@ -333,7 +333,7 @@ artifacts and provide backup guidance before a potentially incompatible migratio
 The project is organized into distinct layers. Each layer has a single responsibility:
 
 ```text
-src/jellyfin_media_normalizer/
+src/media_library_normalizer/
 ├── constants.py            — project-wide string and tuple constants
 ├── settings.py             — runtime configuration via environment variables
 ├── main.py                 — application entry point

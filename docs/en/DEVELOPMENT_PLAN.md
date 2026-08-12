@@ -2,7 +2,7 @@
 
 [English](DEVELOPMENT_PLAN.md) | [Čeština](../cs/DEVELOPMENT_PLAN.md)
 
-This document tracks verified implementation status and the practical backlog for jellyfin-media-normalizer. Product
+This document tracks verified implementation status and the practical backlog for media-library-normalizer. Product
 rules come from [PROJECT-DESCRIPTION.md](PROJECT-DESCRIPTION.md), while accepted direction and rationale come from
 [PRODUCT_DEVELOPMENT_BRIEF.md](PRODUCT_DEVELOPMENT_BRIEF.md).
 

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.services.scan_service import ScanService
-from jellyfin_media_normalizer.settings import Settings
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.services.scan_service import ScanService
+from media_library_normalizer.settings import Settings
 
 
 def _make_settings(library_path: Path | None = None, workspace_path: Path | None = None) -> Settings:

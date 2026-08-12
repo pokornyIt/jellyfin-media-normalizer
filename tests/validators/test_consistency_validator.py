@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.confidence_level import ConfidenceLevel
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.validation_result import ValidationResult
-from jellyfin_media_normalizer.models.validation_status import ValidationStatus
-from jellyfin_media_normalizer.validators.consistency_validator import ConsistencyValidator
+from media_library_normalizer.models.confidence_level import ConfidenceLevel
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.validation_result import ValidationResult
+from media_library_normalizer.models.validation_status import ValidationStatus
+from media_library_normalizer.validators.consistency_validator import ConsistencyValidator
 
 
 class TestConsistencyValidator:

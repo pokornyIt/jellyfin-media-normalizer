@@ -331,7 +331,7 @@ a před potenciálně nekompatibilní migrací poskytne návod k záloze.
 Projekt je uspořádán do samostatných vrstev. Každá vrstva má jedinou odpovědnost:
 
 ```text
-src/jellyfin_media_normalizer/
+src/media_library_normalizer/
 ├── constants.py            — řetězcové a n-ticové konstanty celého projektu
 ├── settings.py             — běhová konfigurace pomocí proměnných prostředí
 ├── main.py                 — vstupní bod aplikace

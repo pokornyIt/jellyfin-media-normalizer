@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from jellyfin_media_normalizer.models.media_item import MediaItem
-from jellyfin_media_normalizer.models.parsed_media_item import ParsedMediaItem
-from jellyfin_media_normalizer.models.provider_match import ProviderMatch
-from jellyfin_media_normalizer.parsers.provider_id_extractor import extract_provider_id_from_source
+from media_library_normalizer.models.media_item import MediaItem
+from media_library_normalizer.models.parsed_media_item import ParsedMediaItem
+from media_library_normalizer.models.provider_match import ProviderMatch
+from media_library_normalizer.parsers.provider_id_extractor import extract_provider_id_from_source
 
 
 @pytest.mark.parametrize(
